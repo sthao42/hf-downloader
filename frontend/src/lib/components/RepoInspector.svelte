@@ -1,0 +1,275 @@
+<script lang="ts">
+  import { createEventDispatcher } from 'svelte'
+  import type { FileNode, ParsedTarget } from '../types'
+  import { formatBytes, detectQuantBadge } from '../utils'
+  import {
+    Folder,
+    FileText,
+    CheckSquare,
+    Square,
+    Download,
+    FolderSync,
+    SlidersHorizontal,
+    Search,
+    HardDrive,
+    Tag,
+    ChevronRight
+  } from 'lucide-svelte'
+
+  export let target: ParsedTarget | null = null
+  export let files: FileNode[] = []
+  export let defaultDestinations: Record<string, string> = {}
+
+  const dispatch = createEventDispatcher<{
+    stage: { selectedFiles: { file: FileNode; dest: string }[]; autoStart: boolean }
+    openRouter: { selectedFiles: { file: FileNode; dest: string }[] }
+    changeDest: { filePath: string }
+  }>()
+
+  let selectedMap: Record<string, boolean> = {}
+  let searchFilter: string = ''
+  let activeCategory: 'all' | 'safetensors' | 'gguf' | 'text_encoders' | 'vae' = 'all'
+
+  // Initialize all files as selected on load
+  $: if (files) {
+    const next: Record<string, boolean> = {}
+    for (const f of files) {
+      next[f.path] = selectedMap[f.path] !== undefined ? selectedMap[f.path] : true
+    }
+    selectedMap = next
+  }
+
+  $: filteredFiles = files.filter(f => {
+    const lower = f.path.toLowerCase()
+    if (searchFilter && !lower.includes(searchFilter.toLowerCase())) {
+      return false
+    }
+    if (activeCategory === 'safetensors') return lower.endsWith('.safetensors')
+    if (activeCategory === 'gguf') return lower.endsWith('.gguf')
+    if (activeCategory === 'text_encoders') return lower.includes('clip') || lower.includes('t5') || lower.includes('text_encoder')
+    if (activeCategory === 'vae') return lower.includes('vae')
+    return true
+  })
+
+  $: selectedFiles = files
+    .filter(f => selectedMap[f.path])
+    .map(f => ({ file: f, dest: defaultDestinations[f.path] || '' }))
+
+  $: totalSelectedBytes = selectedFiles.reduce((acc, curr) => acc + (curr.file.size || 0), 0)
+
+  function toggleAll(selectAll: boolean) {
+    const next: Record<string, boolean> = { ...selectedMap }
+    for (const f of filteredFiles) {
+      next[f.path] = selectAll
+    }
+    selectedMap = next
+  }
+
+  function handleStage(autoStart: boolean) {
+    if (selectedFiles.length === 0) return
+    dispatch('stage', { selectedFiles, autoStart })
+  }
+
+  function handleOpenRouter() {
+    if (selectedFiles.length === 0) return
+    dispatch('openRouter', { selectedFiles })
+  }
+</script>
+
+{#if target}
+  <div class="bg-dark-850 border border-dark-700/60 rounded-2xl p-5 shadow-xl flex flex-col gap-4">
+    <!-- Header: Repo Metadata -->
+    <div class="flex items-start justify-between flex-wrap gap-3 pb-4 border-b border-dark-700/50">
+      <div>
+        <div class="flex items-center gap-2 text-xs font-mono text-slate-400 mb-1">
+          <span class="px-2 py-0.5 rounded bg-dark-800 text-accent-indigo border border-dark-700 uppercase font-semibold">
+            {target.type}
+          </span>
+          <ChevronRight class="w-3.5 h-3.5 text-slate-600" />
+          <span class="text-slate-300">{target.repoId}</span>
+          <span class="text-slate-600">@</span>
+          <span class="text-accent-cyan">{target.revision}</span>
+          {#if target.subpath}
+            <ChevronRight class="w-3.5 h-3.5 text-slate-600" />
+            <span class="text-amber-400">{target.subpath}</span>
+          {/if}
+        </div>
+        <h2 class="text-lg font-bold text-white tracking-tight flex items-center gap-2">
+          <span>{target.repoId.split('/')[1] || target.repoId}</span>
+        </h2>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="flex items-center gap-2 flex-wrap">
+        <button
+          type="button"
+          on:click={handleOpenRouter}
+          disabled={selectedFiles.length === 0}
+          class="px-3 py-2 rounded-xl bg-dark-800 hover:bg-dark-700 text-slate-300 border border-dark-700 hover:border-slate-600 text-xs font-medium flex items-center gap-1.5 transition-colors disabled:opacity-40"
+        >
+          <SlidersHorizontal class="w-3.5 h-3.5 text-accent-cyan" />
+          <span>Route Destinations ({selectedFiles.length})</span>
+        </button>
+
+        <button
+          type="button"
+          on:click={() => handleStage(false)}
+          disabled={selectedFiles.length === 0}
+          class="px-3.5 py-2 rounded-xl bg-dark-800 hover:bg-dark-700 text-slate-200 border border-dark-700 hover:border-slate-500 text-xs font-medium flex items-center gap-1.5 transition-colors disabled:opacity-40"
+        >
+          <FolderSync class="w-3.5 h-3.5 text-accent-amber" />
+          <span>Stage Selected</span>
+        </button>
+
+        <button
+          type="button"
+          on:click={() => handleStage(true)}
+          disabled={selectedFiles.length === 0}
+          class="px-4 py-2 rounded-xl bg-gradient-to-r from-accent-indigo to-accent-purple hover:from-indigo-500 hover:to-purple-500 text-white text-xs font-semibold shadow-lg shadow-indigo-500/20 flex items-center gap-1.5 transition-all disabled:opacity-40"
+        >
+          <Download class="w-3.5 h-3.5" />
+          <span>Download Now ({formatBytes(totalSelectedBytes)})</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Filters & Search Toolbar -->
+    <div class="flex items-center justify-between flex-wrap gap-3">
+      <!-- Category Pills -->
+      <div class="flex items-center gap-1.5 flex-wrap">
+        <button
+          type="button"
+          on:click={() => (activeCategory = 'all')}
+          class="px-2.5 py-1 rounded-lg text-xs font-medium transition-colors {activeCategory === 'all' ? 'bg-accent-indigo text-white' : 'bg-dark-800 text-slate-400 hover:text-slate-200'}"
+        >
+          All ({files.length})
+        </button>
+        <button
+          type="button"
+          on:click={() => (activeCategory = 'safetensors')}
+          class="px-2.5 py-1 rounded-lg text-xs font-medium transition-colors {activeCategory === 'safetensors' ? 'bg-accent-indigo text-white' : 'bg-dark-800 text-slate-400 hover:text-slate-200'}"
+        >
+          Safetensors
+        </button>
+        <button
+          type="button"
+          on:click={() => (activeCategory = 'gguf')}
+          class="px-2.5 py-1 rounded-lg text-xs font-medium transition-colors {activeCategory === 'gguf' ? 'bg-accent-indigo text-white' : 'bg-dark-800 text-slate-400 hover:text-slate-200'}"
+        >
+          GGUF Quants
+        </button>
+        <button
+          type="button"
+          on:click={() => (activeCategory = 'text_encoders')}
+          class="px-2.5 py-1 rounded-lg text-xs font-medium transition-colors {activeCategory === 'text_encoders' ? 'bg-accent-indigo text-white' : 'bg-dark-800 text-slate-400 hover:text-slate-200'}"
+        >
+          Text Encoders
+        </button>
+        <button
+          type="button"
+          on:click={() => (activeCategory = 'vae')}
+          class="px-2.5 py-1 rounded-lg text-xs font-medium transition-colors {activeCategory === 'vae' ? 'bg-accent-indigo text-white' : 'bg-dark-800 text-slate-400 hover:text-slate-200'}"
+        >
+          VAEs
+        </button>
+      </div>
+
+      <!-- Search & Select All controls -->
+      <div class="flex items-center gap-3">
+        <div class="relative w-48">
+          <Search class="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-slate-500" />
+          <input
+            type="text"
+            bind:value={searchFilter}
+            placeholder="Filter files..."
+            class="w-full pl-8 pr-2.5 py-1.5 bg-dark-950/80 border border-dark-700 rounded-lg text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-accent-indigo"
+          />
+        </div>
+
+        <div class="flex items-center gap-1.5 text-xs">
+          <button
+            type="button"
+            on:click={() => toggleAll(true)}
+            class="p-1 hover:text-slate-200 text-slate-400 transition-colors"
+            title="Select all filtered"
+          >
+            <CheckSquare class="w-4 h-4" />
+          </button>
+          <button
+            type="button"
+            on:click={() => toggleAll(false)}
+            class="p-1 hover:text-slate-200 text-slate-400 transition-colors"
+            title="Deselect all filtered"
+          >
+            <Square class="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- File Tree List -->
+    <div class="max-h-[380px] overflow-y-auto divide-y divide-dark-800/80 border border-dark-700/60 rounded-xl bg-dark-950/40">
+      {#if filteredFiles.length === 0}
+        <div class="p-8 text-center text-slate-500 text-sm">
+          No files match the current filter.
+        </div>
+      {:else}
+        {#each filteredFiles as file}
+          {@const quant = detectQuantBadge(file.path)}
+          {@const isSelected = !!selectedMap[file.path]}
+          <div
+            class="flex items-center justify-between p-3 hover:bg-dark-800/40 transition-colors gap-3 {isSelected ? 'bg-indigo-950/10' : 'opacity-70'}"
+          >
+            <label class="flex items-center gap-3 min-w-0 flex-1 cursor-pointer">
+              <input
+                type="checkbox"
+                bind:checked={selectedMap[file.path]}
+                class="rounded border-dark-700 text-accent-indigo focus:ring-0 bg-dark-900 w-4 h-4"
+              />
+              <FileText class="w-4 h-4 text-slate-500 flex-shrink-0" />
+              <div class="min-w-0 flex-1">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <span class="text-xs font-mono font-medium text-slate-200 truncate">{file.path}</span>
+                  {#if quant}
+                    <span class="px-2 py-0.5 rounded text-[10px] font-semibold border {quant.color}">
+                      {quant.label}
+                    </span>
+                  {/if}
+                </div>
+                <!-- Pre-routed destination indicator -->
+                <div class="text-[11px] text-slate-500 flex items-center gap-1 mt-0.5 truncate">
+                  <HardDrive class="w-3 h-3 text-slate-600 flex-shrink-0" />
+                  <span class="truncate">{defaultDestinations[file.path] || 'Default Folder'}</span>
+                </div>
+              </div>
+            </label>
+
+            <!-- File Size & Destination switch -->
+            <div class="flex items-center gap-3 flex-shrink-0">
+              <span class="text-xs font-mono font-semibold text-slate-300">
+                {formatBytes(file.size)}
+              </span>
+              <button
+                type="button"
+                on:click={() => dispatch('changeDest', { filePath: file.path })}
+                class="px-2 py-1 text-[11px] text-slate-400 hover:text-accent-cyan bg-dark-800 hover:bg-dark-700 rounded border border-dark-700/60 transition-colors"
+              >
+                Change Dir
+              </button>
+            </div>
+          </div>
+        {/each}
+      {/if}
+    </div>
+
+    <!-- Summary Footer -->
+    <div class="flex items-center justify-between text-xs text-slate-400 px-1 pt-1">
+      <div>
+        Showing <span class="text-slate-200 font-semibold">{filteredFiles.length}</span> of <span class="text-slate-200">{files.length}</span> files
+      </div>
+      <div>
+        Selected: <span class="text-accent-cyan font-bold font-mono">{selectedFiles.length}</span> files (<span class="text-accent-indigo font-bold font-mono">{formatBytes(totalSelectedBytes)}</span>)
+      </div>
+    </div>
+  </div>
+{/if}
