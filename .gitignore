@@ -1,0 +1,38 @@
+# Antigravity & Agent workspace
+.agents/
+PLAN.md
+
+# Binaries / build
+build/bin/
+bin/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Frontend & dependencies
+frontend/dist/
+frontend/node_modules/
+node_modules/
+
+# Go
+*.test
+*.out
+go.work
+go.work.sum
+
+# Temporary & State files
+*.part
+*.part.json
+
+# Environment / local credentials
+.env*
+*.local
+credentials.json
+secrets.json
+
+# Operating System Files
+.DS_Store
+Thumbs.db
+desktop.ini
