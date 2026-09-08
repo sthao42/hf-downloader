@@ -39,6 +39,10 @@ export function SelectDirectoryDialog(arg1:string):Promise<string>;
 
 export function StartItem(arg1:string):Promise<void>;
 
+export function UpdateBookmarks(arg1:Array<config.FolderBookmark>):Promise<void>;
+
 export function UpdateItemDestination(arg1:string,arg2:string):Promise<void>;
+
+export function UpdateRecentPaths(arg1:Array<string>):Promise<void>;
 
 export function VerifyLocalFile(arg1:downloader.DownloadItem):Promise<downloader.VerificationResult>;

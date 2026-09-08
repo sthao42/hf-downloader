@@ -240,3 +240,13 @@ func (a *App) OpenFolder(folderPath string) error {
 func (a *App) CheckDiskSpace(targetPath string) (platform.DiskSpaceInfo, error) {
 	return platform.CheckDiskSpace(targetPath)
 }
+
+// UpdateBookmarks saves the reordered or modified list of bookmarks.
+func (a *App) UpdateBookmarks(bookmarks []config.FolderBookmark) error {
+	return a.configMgr.UpdateBookmarks(bookmarks)
+}
+
+// UpdateRecentPaths saves the reordered recent paths list.
+func (a *App) UpdateRecentPaths(paths []string) error {
+	return a.configMgr.UpdateRecentPaths(paths)
+}

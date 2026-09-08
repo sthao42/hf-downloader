@@ -58,4 +58,25 @@ func TestConfigManager(t *testing.T) {
 	if !filepath.IsAbs(clipDest) || filepath.Base(clipDest) != "text_encoders" {
 		t.Errorf("Expected text_encoders destination, got: %s", clipDest)
 	}
+
+	// 4. Test UpdateBookmarks reordering
+	b1, _ := cm.AddBookmark("Folder A", "D:\\test\\a")
+	b2, _ := cm.AddBookmark("Folder B", "D:\\test\\b")
+	reordered := []FolderBookmark{b2, b1}
+	if err := cm.UpdateBookmarks(reordered); err != nil {
+		t.Fatalf("UpdateBookmarks failed: %v", err)
+	}
+	currentBMs := cm.GetSettings().Bookmarks
+	if len(currentBMs) < 2 || currentBMs[0].ID != b2.ID {
+		t.Errorf("Expected reordered bookmarks to have %s first, got %v", b2.ID, currentBMs)
+	}
+
+	// 5. Test UpdateRecentPaths reordering
+	recentList := []string{"D:\\path1", "D:\\path2"}
+	if err := cm.UpdateRecentPaths(recentList); err != nil {
+		t.Fatalf("UpdateRecentPaths failed: %v", err)
+	}
+	if len(cm.GetSettings().RecentPaths) != 2 || cm.GetSettings().RecentPaths[0] != "D:\\path1" {
+		t.Errorf("Unexpected RecentPaths: %v", cm.GetSettings().RecentPaths)
+	}
 }

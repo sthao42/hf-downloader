@@ -1,7 +1,7 @@
 import { writable } from 'svelte/store'
 import { config } from '../../../wailsjs/go/models'
 import type { Settings } from '../types'
-import { GetSettings, SaveSettings, OpenHFTokenPage } from '../../../wailsjs/go/main/App'
+import { GetSettings, SaveSettings, OpenHFTokenPage, UpdateRecentPaths } from '../../../wailsjs/go/main/App'
 
 export const settingsStore = writable<Settings | null>(null)
 
@@ -23,6 +23,18 @@ export async function persistSettings(updated: any) {
   } catch (err) {
     console.error('Failed to save settings:', err)
     throw err
+  }
+}
+
+export async function reorderRecentPaths(paths: string[]) {
+  settingsStore.update(s => {
+    if (!s) return s
+    return config.Settings.createFrom({ ...s, recentPaths: paths })
+  })
+  try {
+    await UpdateRecentPaths(paths)
+  } catch (err) {
+    console.error('Failed to persist reordered recent paths:', err)
   }
 }
 

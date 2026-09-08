@@ -65,3 +65,21 @@ func (cm *ConfigManager) AddRecentPath(path string) {
 	cm.settings.RecentPaths = newRecents
 	_ = cm.saveLocked()
 }
+
+// UpdateBookmarks updates the full bookmarks slice with the given order and persists to disk.
+func (cm *ConfigManager) UpdateBookmarks(bookmarks []FolderBookmark) error {
+	cm.mu.Lock()
+	defer cm.mu.Unlock()
+
+	cm.settings.Bookmarks = bookmarks
+	return cm.saveLocked()
+}
+
+// UpdateRecentPaths updates the recent paths slice order and persists to disk.
+func (cm *ConfigManager) UpdateRecentPaths(paths []string) error {
+	cm.mu.Lock()
+	defer cm.mu.Unlock()
+
+	cm.settings.RecentPaths = paths
+	return cm.saveLocked()
+}

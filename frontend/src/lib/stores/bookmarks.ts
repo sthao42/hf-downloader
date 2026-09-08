@@ -4,8 +4,10 @@ import {
   GetBookmarks,
   AddBookmark,
   DeleteBookmark,
+  UpdateBookmarks,
   SelectDirectoryDialog
 } from '../../../wailsjs/go/main/App'
+import { config } from '../../../wailsjs/go/models'
 
 export const bookmarksStore = writable<FolderBookmark[]>([])
 
@@ -45,5 +47,15 @@ export async function browseDirectory(defaultPath: string = ''): Promise<string>
   } catch (err) {
     console.error('Failed to open directory dialog:', err)
     return ''
+  }
+}
+
+export async function reorderBookmarks(reordered: FolderBookmark[]) {
+  bookmarksStore.set(reordered)
+  try {
+    const models = reordered.map(b => config.FolderBookmark.createFrom(b))
+    await UpdateBookmarks(models)
+  } catch (err) {
+    console.error('Failed to persist reordered bookmarks:', err)
   }
 }

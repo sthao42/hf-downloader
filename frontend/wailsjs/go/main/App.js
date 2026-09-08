@@ -70,8 +70,16 @@ export function StartItem(arg1) {
   return window['go']['main']['App']['StartItem'](arg1);
 }
 
+export function UpdateBookmarks(arg1) {
+  return window['go']['main']['App']['UpdateBookmarks'](arg1);
+}
+
 export function UpdateItemDestination(arg1, arg2) {
   return window['go']['main']['App']['UpdateItemDestination'](arg1, arg2);
+}
+
+export function UpdateRecentPaths(arg1) {
+  return window['go']['main']['App']['UpdateRecentPaths'](arg1);
 }
 
 export function VerifyLocalFile(arg1) {
