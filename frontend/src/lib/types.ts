@@ -1,6 +1,7 @@
 import type { config, downloader, hfapi, main } from '../../wailsjs/go/models'
 
 export type DownloadItem = downloader.DownloadItem
+export type VerificationResult = downloader.VerificationResult
 export type FolderBookmark = config.FolderBookmark
 export type RoutingRule = config.RoutingRule
 export type Settings = config.Settings

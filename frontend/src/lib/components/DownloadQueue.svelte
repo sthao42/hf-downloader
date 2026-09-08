@@ -3,8 +3,9 @@
   import { settingsStore, persistSettings } from '../stores/settings'
   import { formatBytes } from '../utils'
   import { fetchDiskSpace } from '../stores/disk'
-  import type { DownloadItem } from '../types'
+  import type { DownloadItem, VerificationResult } from '../types'
   import type { platform } from '../../../wailsjs/go/models'
+  import VerifyResultModal from './VerifyResultModal.svelte'
   import {
     ListOrdered,
     Play,
@@ -27,6 +28,11 @@
   let activeTab: 'all' | 'active' | 'staged' | 'completed' = 'all'
   let verifyingMap: Record<string, boolean> = {}
   let selectedIds: Record<string, boolean> = {}
+
+  let verifyModalOpen: boolean = false
+  let verifyItem: DownloadItem | null = null
+  let verifyResult: VerificationResult | null = null
+  let verifyError: string | null = null
 
   let queueDiskInfo: platform.DiskSpaceInfo | null = null
   let lastCheckedQueueDir: string = ''
@@ -172,13 +178,15 @@
     verifyingMap = { ...verifyingMap, [item.id]: true }
     try {
       const res = await verifyTaskFile(item)
-      if (res.exists && res.valid) {
-        alert(`File verified successfully!\nSize: ${formatBytes(res.actualSize)}\nSHA-256: ${res.actualSha256 || 'Matches expected'}`)
-      } else {
-        alert(`Verification notice:\n${res.message}`)
-      }
-    } catch (e) {
-      alert(`Error verifying file: ${e}`)
+      verifyItem = item
+      verifyResult = res
+      verifyError = null
+      verifyModalOpen = true
+    } catch (e: any) {
+      verifyItem = item
+      verifyResult = null
+      verifyError = String(e?.message || e)
+      verifyModalOpen = true
     } finally {
       verifyingMap = { ...verifyingMap, [item.id]: false }
     }
@@ -524,3 +532,12 @@
     </div>
   {/if}
 </div>
+
+<!-- Beautiful Centered Verification Result Modal -->
+<VerifyResultModal
+  show={verifyModalOpen}
+  item={verifyItem}
+  result={verifyResult}
+  error={verifyError}
+  on:close={() => (verifyModalOpen = false)}
+/>
