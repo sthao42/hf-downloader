@@ -17,11 +17,13 @@
     ShieldCheck,
     RotateCw,
     ToggleLeft,
-    ToggleRight
+    ToggleRight,
+    CircleStop
   } from 'lucide-svelte'
 
   let activeTab: 'all' | 'active' | 'staged' | 'completed' = 'all'
   let verifyingMap: Record<string, boolean> = {}
+  let selectedIds: Record<string, boolean> = {}
 
   $: queue = $queueStore
 
@@ -34,6 +36,20 @@
 
   $: activeCount = queue.filter(i => i.status === 'downloading').length
   $: stagedCount = queue.filter(i => i.status === 'staged').length
+
+  // Active downloading and queued activities for Cancel All
+  $: activeDownloadingItems = queue.filter(i => i.status === 'downloading' || i.status === 'queued' || i.status === 'verifying')
+  $: activeDownloadingCount = activeDownloadingItems.length
+
+  // Selected items calculation within currently filtered view
+  $: selectedFilteredItems = filteredItems.filter(i => !!selectedIds[i.id])
+  $: selectedCount = selectedFilteredItems.length
+  $: isAllSelected = filteredItems.length > 0 && filteredItems.every(i => !!selectedIds[i.id])
+  $: isSomeSelected = selectedCount > 0 && !isAllSelected
+
+  // Batch startable and pausable selected items
+  $: startableSelected = selectedFilteredItems.filter(i => i.status === 'staged' || i.status === 'paused' || i.status === 'failed')
+  $: pausableSelected = selectedFilteredItems.filter(i => i.status === 'downloading' || i.status === 'queued')
 
   function formatETA(seconds: number): string {
     if (!seconds || seconds <= 0) return ''
@@ -51,6 +67,41 @@
     await persistSettings(updated)
   }
 
+  function toggleMasterCheckbox() {
+    const targetState = !isAllSelected
+    const next: Record<string, boolean> = { ...selectedIds }
+    for (const item of filteredItems) {
+      next[item.id] = targetState
+    }
+    selectedIds = next
+  }
+
+  function toggleSelectItem(id: string) {
+    selectedIds = {
+      ...selectedIds,
+      [id]: !selectedIds[id]
+    }
+  }
+
+  function startSelected() {
+    for (const item of startableSelected) {
+      startTask(item.id)
+    }
+  }
+
+  function pauseSelected() {
+    for (const item of pausableSelected) {
+      pauseTask(item.id)
+    }
+  }
+
+  function cancelAllActive() {
+    if (activeDownloadingItems.length === 0) return
+    for (const item of activeDownloadingItems) {
+      cancelTask(item.id)
+    }
+  }
+
   function startAllStaged() {
     for (const item of queue) {
       if (item.status === 'staged' || item.status === 'paused') {
@@ -64,6 +115,16 @@
       if (item.status === 'completed') {
         removeTask(item.id)
       }
+    }
+    selectedIds = {}
+  }
+
+  function handleRemoveItem(id: string) {
+    removeTask(id)
+    if (selectedIds[id]) {
+      const next = { ...selectedIds }
+      delete next[id]
+      selectedIds = next
     }
   }
 
@@ -85,7 +146,7 @@
 </script>
 
 <div class="bg-dark-850 border border-dark-700/60 rounded-2xl p-5 shadow-xl flex flex-col gap-4">
-  <!-- Queue Header & Controls -->
+  <!-- Queue Header & Top Controls -->
   <div class="flex items-center justify-between flex-wrap gap-3 pb-4 border-b border-dark-700/50">
     <div class="flex items-center gap-3">
       <div class="flex items-center gap-2">
@@ -109,18 +170,32 @@
       </button>
     </div>
 
-    <!-- Actions -->
-    <div class="flex items-center gap-2">
+    <!-- Actions: Red Cancel Button & Staged/Clear actions -->
+    <div class="flex items-center gap-2 flex-wrap">
+      <!-- Red Cancel Button to stop all active downloading activities -->
+      <button
+        type="button"
+        on:click={cancelAllActive}
+        disabled={activeDownloadingCount === 0}
+        class="px-3.5 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 active:bg-rose-700 disabled:opacity-35 disabled:cursor-not-allowed text-white text-xs font-bold flex items-center gap-1.5 shadow-md shadow-rose-900/30 transition-all active:scale-95"
+        title={activeDownloadingCount > 0 ? `Stop and cancel all ${activeDownloadingCount} active downloading activities` : 'No active downloading activities to cancel'}
+      >
+        <CircleStop class="w-4 h-4" />
+        <span>Cancel All Active {activeDownloadingCount > 0 ? `(${activeDownloadingCount})` : ''}</span>
+      </button>
+
       {#if stagedCount > 0}
         <button
           type="button"
           on:click={startAllStaged}
-          class="px-3 py-1.5 rounded-xl bg-accent-indigo hover:bg-indigo-500 text-white text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-sm"
+          class="px-3 py-1.5 rounded-xl bg-dark-800 hover:bg-dark-700 text-slate-200 border border-dark-700 text-xs font-semibold flex items-center gap-1.5 transition-colors"
+          title="Start all staged items in queue"
         >
-          <Play class="w-3 h-3 fill-current" />
+          <Play class="w-3 h-3 fill-current text-accent-indigo" />
           <span>Start All Staged ({stagedCount})</span>
         </button>
       {/if}
+
       <button
         type="button"
         on:click={clearCompleted}
@@ -131,36 +206,85 @@
     </div>
   </div>
 
-  <!-- Queue Filter Tabs -->
-  <div class="flex items-center gap-2">
-    <button
-      type="button"
-      on:click={() => (activeTab = 'all')}
-      class="px-3 py-1 rounded-lg text-xs font-medium transition-colors {activeTab === 'all' ? 'bg-dark-700 text-white font-semibold' : 'text-slate-400 hover:text-slate-200'}"
-    >
-      All ({queue.length})
-    </button>
-    <button
-      type="button"
-      on:click={() => (activeTab = 'active')}
-      class="px-3 py-1 rounded-lg text-xs font-medium transition-colors {activeTab === 'active' ? 'bg-dark-700 text-white font-semibold' : 'text-slate-400 hover:text-slate-200'}"
-    >
-      Active ({activeCount})
-    </button>
-    <button
-      type="button"
-      on:click={() => (activeTab = 'staged')}
-      class="px-3 py-1 rounded-lg text-xs font-medium transition-colors {activeTab === 'staged' ? 'bg-dark-700 text-white font-semibold' : 'text-slate-400 hover:text-slate-200'}"
-    >
-      Staged / Paused ({stagedCount})
-    </button>
-    <button
-      type="button"
-      on:click={() => (activeTab = 'completed')}
-      class="px-3 py-1 rounded-lg text-xs font-medium transition-colors {activeTab === 'completed' ? 'bg-dark-700 text-white font-semibold' : 'text-slate-400 hover:text-slate-200'}"
-    >
-      Completed / Failed
-    </button>
+  <!-- Queue Filter Tabs & Batch Selection Toolbar -->
+  <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-3 flex-wrap">
+    <!-- Filter Tabs -->
+    <div class="flex items-center gap-1.5 flex-wrap">
+      <button
+        type="button"
+        on:click={() => (activeTab = 'all')}
+        class="px-3 py-1 rounded-lg text-xs font-medium transition-colors {activeTab === 'all' ? 'bg-dark-700 text-white font-semibold' : 'text-slate-400 hover:text-slate-200'}"
+      >
+        All ({queue.length})
+      </button>
+      <button
+        type="button"
+        on:click={() => (activeTab = 'active')}
+        class="px-3 py-1 rounded-lg text-xs font-medium transition-colors {activeTab === 'active' ? 'bg-dark-700 text-white font-semibold' : 'text-slate-400 hover:text-slate-200'}"
+      >
+        Active ({activeCount})
+      </button>
+      <button
+        type="button"
+        on:click={() => (activeTab = 'staged')}
+        class="px-3 py-1 rounded-lg text-xs font-medium transition-colors {activeTab === 'staged' ? 'bg-dark-700 text-white font-semibold' : 'text-slate-400 hover:text-slate-200'}"
+      >
+        Staged / Paused ({stagedCount})
+      </button>
+      <button
+        type="button"
+        on:click={() => (activeTab = 'completed')}
+        class="px-3 py-1 rounded-lg text-xs font-medium transition-colors {activeTab === 'completed' ? 'bg-dark-700 text-white font-semibold' : 'text-slate-400 hover:text-slate-200'}"
+      >
+        Completed / Failed
+      </button>
+    </div>
+
+    <!-- Batch Controls for Selected Queue Downloads -->
+    {#if filteredItems.length > 0}
+      <div class="flex items-center gap-2 flex-wrap">
+        <!-- Master Checkbox -->
+        <label
+          class="flex items-center gap-1.5 text-xs cursor-pointer text-slate-300 hover:text-white select-none px-2.5 py-1.5 rounded-lg bg-dark-900/80 border border-dark-700 hover:border-slate-500 transition-colors"
+          title="Select or deselect all items in current view"
+        >
+          <input
+            type="checkbox"
+            checked={isAllSelected}
+            indeterminate={isSomeSelected}
+            on:change={toggleMasterCheckbox}
+            class="rounded border-dark-700 text-accent-indigo focus:ring-0 bg-dark-950 w-4 h-4 cursor-pointer"
+          />
+          <span class="font-medium text-xs">
+            {selectedCount > 0 ? `${selectedCount} Selected` : 'Select All'}
+          </span>
+        </label>
+
+        <!-- Start Selected Button -->
+        <button
+          type="button"
+          on:click={startSelected}
+          disabled={startableSelected.length === 0}
+          class="px-3 py-1.5 rounded-xl bg-accent-indigo hover:bg-indigo-500 disabled:opacity-35 disabled:cursor-not-allowed text-white text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm"
+          title={startableSelected.length > 0 ? `Start ${startableSelected.length} selected download(s)` : 'Select staged or paused items to start'}
+        >
+          <Play class="w-3 h-3 fill-current" />
+          <span>Start Selected {startableSelected.length > 0 ? `(${startableSelected.length})` : ''}</span>
+        </button>
+
+        <!-- Pause Selected Button -->
+        <button
+          type="button"
+          on:click={pauseSelected}
+          disabled={pausableSelected.length === 0}
+          class="px-3 py-1.5 rounded-xl bg-dark-800 hover:bg-dark-700 disabled:opacity-35 disabled:cursor-not-allowed text-amber-400 border border-dark-700 hover:border-slate-500 text-xs font-semibold flex items-center gap-1.5 transition-colors"
+          title={pausableSelected.length > 0 ? `Pause ${pausableSelected.length} active download(s)` : 'Select active downloads to pause'}
+        >
+          <Pause class="w-3 h-3" />
+          <span>Pause Selected {pausableSelected.length > 0 ? `(${pausableSelected.length})` : ''}</span>
+        </button>
+      </div>
+    {/if}
   </div>
 
   <!-- Items List -->
@@ -172,13 +296,23 @@
   {:else}
     <div class="flex flex-col gap-3">
       {#each filteredItems as item (item.id)}
-        <div class="bg-dark-900 border border-dark-700/80 rounded-xl p-4 flex flex-col gap-3 shadow-md hover:border-slate-600/70 transition-colors">
-          <!-- Top Row: File Name, Status Pill & Controls -->
+        <div class="bg-dark-900 border rounded-xl p-4 flex flex-col gap-3 shadow-md transition-all {selectedIds[item.id] ? 'border-accent-indigo/70 ring-1 ring-accent-indigo/25 bg-dark-900/95' : 'border-dark-700/80 hover:border-slate-600/70'}">
+          <!-- Top Row: Checkbox, File Name, Status Pill & Controls -->
           <div class="flex items-start justify-between gap-3 flex-wrap">
-            <div class="min-w-0 flex-1">
-              <div class="flex items-center gap-2 flex-wrap">
-                <span class="text-xs font-mono font-bold text-white truncate">{item.finalFilename}</span>
-                <span class="text-xs font-mono text-slate-500 truncate">({item.repoId})</span>
+            <div class="flex items-start gap-2.5 min-w-0 flex-1">
+              <!-- Item Select Checkbox -->
+              <input
+                type="checkbox"
+                checked={!!selectedIds[item.id]}
+                on:change={() => toggleSelectItem(item.id)}
+                class="rounded border-dark-700 text-accent-indigo focus:ring-0 bg-dark-950 w-4 h-4 cursor-pointer mt-0.5 flex-shrink-0"
+                title="Select item for batch actions"
+              />
+
+              <div class="min-w-0 flex-1">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <span class="text-xs font-mono font-bold text-white truncate">{item.finalFilename}</span>
+                  <span class="text-xs font-mono text-slate-500 truncate">({item.repoId})</span>
 
                 <!-- Status Badge -->
                 {#if item.status === 'downloading'}
@@ -222,6 +356,7 @@
                 Target: <span class="text-slate-400">{item.destinationDir}</span>
               </div>
             </div>
+          </div>
 
             <!-- Card Actions -->
             <div class="flex items-center gap-1.5 flex-shrink-0">
@@ -288,7 +423,7 @@
               <!-- Remove from list -->
               <button
                 type="button"
-                on:click={() => removeTask(item.id)}
+                on:click={() => handleRemoveItem(item.id)}
                 class="p-1 hover:text-rose-400 text-slate-500 rounded transition-colors"
                 title="Remove from queue"
               >

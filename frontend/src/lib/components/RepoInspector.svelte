@@ -122,7 +122,7 @@
           class="px-3.5 py-2 rounded-xl bg-dark-800 hover:bg-dark-700 text-slate-200 border border-dark-700 hover:border-slate-500 text-xs font-medium flex items-center gap-1.5 transition-colors disabled:opacity-40"
         >
           <FolderSync class="w-3.5 h-3.5 text-accent-amber" />
-          <span>Stage Selected</span>
+          <span>Queue Selected</span>
         </button>
 
         <button
