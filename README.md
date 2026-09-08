@@ -4,7 +4,7 @@ A high-performance, single-binary cross-platform desktop application built with 
 
 Easily inspect model repositories, select specific quantized weights or split files, route model types to separate storage drives, and download with multi-socket segmented range transfers and cryptographic verification.
 
-# Why built this?
+# Why build this?
 Hugging Face transitioned toward Xet-based storage infrastructure, bringing major backend advantages like deduplication, smarter file chunking, and content hash-checking. The catch? Browser-based downloads remain notoriously sluggish, prone to stalling, and rarely resume cleanly when a connection drops mid-gigabyte on massive files.
 
 The definitive fix is using the official Hugging Face CLI. It saturates your bandwidth with parallel chunk streaming, resumes interrupted transfers automatically, and validates file integrity on the fly. However, constructing and copy-pasting command-line arguments can still be a friction point. This app was built as a lightweight GUI over the Hugging Face CLI to eliminate that friction entirely.
