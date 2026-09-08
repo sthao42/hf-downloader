@@ -11,7 +11,10 @@
     SlidersHorizontal,
     Search,
     HardDrive,
-    ChevronRight
+    ChevronRight,
+    ArrowUp,
+    ArrowDown,
+    ArrowUpDown
   } from 'lucide-svelte'
 
   export let target: ParsedTarget | null = null
@@ -59,6 +62,34 @@
     if (activeCategory === 'text_encoders') return lower.includes('clip') || lower.includes('t5') || lower.includes('text_encoder')
     if (activeCategory === 'vae') return lower.includes('vae')
     return true
+  })
+
+  let sortField: 'name' | 'size' | null = null
+  let sortDirection: 'asc' | 'desc' = 'asc'
+
+  function handleSort(field: 'name' | 'size') {
+    if (sortField === field) {
+      sortDirection = sortDirection === 'asc' ? 'desc' : 'asc'
+    } else {
+      sortField = field
+      sortDirection = field === 'size' ? 'desc' : 'asc'
+    }
+  }
+
+  $: sortedFiles = [...filteredFiles].sort((a, b) => {
+    if (sortField === 'name') {
+      const nameA = a.path.toLowerCase()
+      const nameB = b.path.toLowerCase()
+      const cmp = nameA.localeCompare(nameB)
+      return sortDirection === 'asc' ? cmp : -cmp
+    }
+    if (sortField === 'size') {
+      const sizeA = a.size || 0
+      const sizeB = b.size || 0
+      const cmp = sizeA - sizeB
+      return sortDirection === 'asc' ? cmp : -cmp
+    }
+    return 0
   })
 
   $: selectedFiles = files
@@ -256,59 +287,118 @@
       </div>
     </div>
 
-    <!-- File Tree List -->
-    <div class="max-h-[380px] overflow-y-auto divide-y divide-dark-800/80 border border-dark-700/60 rounded-xl bg-dark-950/40">
-      {#if filteredFiles.length === 0}
-        <div class="p-8 text-center text-slate-500 text-sm">
-          No files match the current filter.
-        </div>
-      {:else}
-        {#each filteredFiles as file}
-          {@const quant = detectQuantBadge(file.path)}
-          {@const isSelected = !!selectedMap[file.path]}
-          <div
-            class="flex items-center justify-between p-3 hover:bg-dark-800/40 transition-colors gap-3 {isSelected ? 'bg-indigo-950/10' : 'opacity-70'}"
+    <!-- File Tree List Container with Top Header Row -->
+    <div class="border border-dark-700/60 rounded-xl bg-dark-950/40 overflow-hidden flex flex-col">
+      <!-- Top Row: Column Sort Headers (Name & Size) -->
+      <div class="flex items-center justify-between px-3 py-2.5 bg-dark-900/90 border-b border-dark-700/60 text-xs font-semibold select-none">
+        <!-- Left: Checkbox + Name Sort Button -->
+        <div class="flex items-center gap-3 min-w-0 flex-1">
+          <input
+            type="checkbox"
+            checked={isAllFilteredSelected}
+            indeterminate={isSomeFilteredSelected}
+            on:change={handleMasterCheckboxToggle}
+            class="rounded border-dark-700 text-accent-indigo focus:ring-0 bg-dark-950 w-4 h-4 cursor-pointer"
+            title="Select or deselect all filtered files"
+          />
+          <button
+            type="button"
+            on:click={() => handleSort('name')}
+            class="inline-flex items-center gap-1.5 transition-colors group focus:outline-none {sortField === 'name' ? 'text-accent-cyan font-bold' : 'text-slate-300 hover:text-white'}"
+            title="Sort by file name ({sortField === 'name' ? (sortDirection === 'asc' ? 'A to Z (click for Z to A)' : 'Z to A (click for A to Z)') : 'Click to sort A to Z'})"
           >
-            <label class="flex items-center gap-3 min-w-0 flex-1 cursor-pointer">
-              <input
-                type="checkbox"
-                bind:checked={selectedMap[file.path]}
-                class="rounded border-dark-700 text-accent-indigo focus:ring-0 bg-dark-900 w-4 h-4"
-              />
-              <FileText class="w-4 h-4 text-slate-500 flex-shrink-0" />
-              <div class="min-w-0 flex-1">
-                <div class="flex items-center gap-2 flex-wrap">
-                  <span class="text-xs font-mono font-medium text-slate-200 truncate">{file.path}</span>
-                  {#if quant}
-                    <span class="px-2 py-0.5 rounded text-[10px] font-semibold border {quant.color}">
-                      {quant.label}
-                    </span>
-                  {/if}
-                </div>
-                <!-- Pre-routed destination indicator -->
-                <div class="text-[11px] text-slate-500 flex items-center gap-1 mt-0.5 truncate">
-                  <HardDrive class="w-3 h-3 text-slate-600 flex-shrink-0" />
-                  <span class="truncate">{defaultDestinations[file.path] || 'Default Folder'}</span>
-                </div>
-              </div>
-            </label>
+            <span>Name</span>
+            {#if sortField === 'name'}
+              {#if sortDirection === 'asc'}
+                <ArrowUp class="w-3.5 h-3.5 text-accent-cyan" />
+              {:else}
+                <ArrowDown class="w-3.5 h-3.5 text-accent-cyan" />
+              {/if}
+            {:else}
+              <ArrowUpDown class="w-3.5 h-3.5 text-slate-500 opacity-50 group-hover:opacity-100 transition-opacity" />
+            {/if}
+          </button>
+        </div>
 
-            <!-- File Size & Destination switch -->
-            <div class="flex items-center gap-3 flex-shrink-0">
-              <span class="text-xs font-mono font-semibold text-slate-300">
-                {formatBytes(file.size)}
-              </span>
-              <button
-                type="button"
-                on:click={() => dispatch('changeDest', { filePath: file.path })}
-                class="px-2 py-1 text-[11px] text-slate-400 hover:text-accent-cyan bg-dark-800 hover:bg-dark-700 rounded border border-dark-700/60 transition-colors"
-              >
-                Change Dir
-              </button>
-            </div>
+        <!-- Right: Size Sort Button + Destination Spacer -->
+        <div class="flex items-center gap-3 flex-shrink-0">
+          <button
+            type="button"
+            on:click={() => handleSort('size')}
+            class="inline-flex items-center gap-1.5 transition-colors group focus:outline-none {sortField === 'size' ? 'text-accent-cyan font-bold' : 'text-slate-300 hover:text-white'}"
+            title="Sort by file size ({sortField === 'size' ? (sortDirection === 'desc' ? 'Largest first (click for Smallest first)' : 'Smallest first (click for Largest first)') : 'Click to sort Largest first'})"
+          >
+            <span>Size</span>
+            {#if sortField === 'size'}
+              {#if sortDirection === 'asc'}
+                <ArrowUp class="w-3.5 h-3.5 text-accent-cyan" />
+              {:else}
+                <ArrowDown class="w-3.5 h-3.5 text-accent-cyan" />
+              {/if}
+            {:else}
+              <ArrowUpDown class="w-3.5 h-3.5 text-slate-500 opacity-50 group-hover:opacity-100 transition-opacity" />
+            {/if}
+          </button>
+          <span class="w-[74px] text-right text-[11px] text-slate-500 font-normal">
+            Destination
+          </span>
+        </div>
+      </div>
+
+      <!-- File Tree List (Scrollable) -->
+      <div class="max-h-[340px] overflow-y-auto divide-y divide-dark-800/80">
+        {#if sortedFiles.length === 0}
+          <div class="p-8 text-center text-slate-500 text-sm">
+            No files match the current filter.
           </div>
-        {/each}
-      {/if}
+        {:else}
+          {#each sortedFiles as file (file.path)}
+            {@const quant = detectQuantBadge(file.path)}
+            {@const isSelected = !!selectedMap[file.path]}
+            <div
+              class="flex items-center justify-between p-3 hover:bg-dark-800/40 transition-colors gap-3 {isSelected ? 'bg-indigo-950/10' : 'opacity-70'}"
+            >
+              <label class="flex items-center gap-3 min-w-0 flex-1 cursor-pointer">
+                <input
+                  type="checkbox"
+                  bind:checked={selectedMap[file.path]}
+                  class="rounded border-dark-700 text-accent-indigo focus:ring-0 bg-dark-900 w-4 h-4 cursor-pointer"
+                />
+                <FileText class="w-4 h-4 text-slate-500 flex-shrink-0" />
+                <div class="min-w-0 flex-1">
+                  <div class="flex items-center gap-2 flex-wrap">
+                    <span class="text-xs font-mono font-medium text-slate-200 truncate">{file.path}</span>
+                    {#if quant}
+                      <span class="px-2 py-0.5 rounded text-[10px] font-semibold border {quant.color}">
+                        {quant.label}
+                      </span>
+                    {/if}
+                  </div>
+                  <!-- Pre-routed destination indicator -->
+                  <div class="text-[11px] text-slate-500 flex items-center gap-1 mt-0.5 truncate">
+                    <HardDrive class="w-3 h-3 text-slate-600 flex-shrink-0" />
+                    <span class="truncate">{defaultDestinations[file.path] || 'Default Folder'}</span>
+                  </div>
+                </div>
+              </label>
+
+              <!-- File Size & Destination switch -->
+              <div class="flex items-center gap-3 flex-shrink-0">
+                <span class="text-xs font-mono font-semibold text-slate-300">
+                  {formatBytes(file.size)}
+                </span>
+                <button
+                  type="button"
+                  on:click={() => dispatch('changeDest', { filePath: file.path })}
+                  class="w-[74px] px-2 py-1 text-[11px] text-slate-400 hover:text-accent-cyan bg-dark-800 hover:bg-dark-700 rounded border border-dark-700/60 transition-colors text-center"
+                >
+                  Change Dir
+                </button>
+              </div>
+            </div>
+          {/each}
+        {/if}
+      </div>
     </div>
 
     <!-- Summary Footer -->
