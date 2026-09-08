@@ -2,7 +2,9 @@
   import { queueStore, startTask, pauseTask, resumeTask, cancelTask, removeTask, openTaskFolder, verifyTaskFile } from '../stores/queue'
   import { settingsStore, persistSettings } from '../stores/settings'
   import { formatBytes } from '../utils'
+  import { fetchDiskSpace } from '../stores/disk'
   import type { DownloadItem } from '../types'
+  import type { platform } from '../../../wailsjs/go/models'
   import {
     ListOrdered,
     Play,
@@ -18,14 +20,27 @@
     RotateCw,
     ToggleLeft,
     ToggleRight,
-    CircleStop
+    CircleStop,
+    HardDrive
   } from 'lucide-svelte'
 
   let activeTab: 'all' | 'active' | 'staged' | 'completed' = 'all'
   let verifyingMap: Record<string, boolean> = {}
   let selectedIds: Record<string, boolean> = {}
 
+  let queueDiskInfo: platform.DiskSpaceInfo | null = null
+  let lastCheckedQueueDir: string = ''
+
   $: queue = $queueStore
+
+  $: targetQueueDir = queue[0]?.destinationDir || $settingsStore?.defaultDownloadDir || ''
+
+  $: if (targetQueueDir && targetQueueDir !== lastCheckedQueueDir) {
+    lastCheckedQueueDir = targetQueueDir
+    fetchDiskSpace(targetQueueDir).then(info => {
+      queueDiskInfo = info
+    })
+  }
 
   $: filteredItems = queue.filter(item => {
     if (activeTab === 'active') return item.status === 'downloading' || item.status === 'queued' || item.status === 'verifying'
@@ -84,6 +99,19 @@
   }
 
   function startSelected() {
+    // Storage space check
+    if (queueDiskInfo && startableSelected.length > 0) {
+      const neededBytes = startableSelected.reduce((sum, item) => sum + (item.size || 0), 0)
+      if (queueDiskInfo.availableBytes < neededBytes + 100 * 1024 * 1024) {
+        const proceed = confirm(
+          `Storage Drive Warning:\n\n` +
+          `Destination drive (${queueDiskInfo.path}) only has ${formatBytes(queueDiskInfo.availableBytes)} available, but selected items require ${formatBytes(neededBytes)}.\n\n` +
+          `Downloads may stall or fail if storage runs out.\n\n` +
+          `Start anyway?`
+        )
+        if (!proceed) return
+      }
+    }
     for (const item of startableSelected) {
       startTask(item.id)
     }
@@ -103,6 +131,18 @@
   }
 
   function startAllStaged() {
+    if (queueDiskInfo && stagedCount > 0) {
+      const neededBytes = queue.filter(i => i.status === 'staged' || i.status === 'paused').reduce((sum, item) => sum + (item.size || 0), 0)
+      if (queueDiskInfo.availableBytes < neededBytes + 100 * 1024 * 1024) {
+        const proceed = confirm(
+          `Storage Drive Warning:\n\n` +
+          `Destination drive (${queueDiskInfo.path}) only has ${formatBytes(queueDiskInfo.availableBytes)} available, but starting all staged items requires ${formatBytes(neededBytes)}.\n\n` +
+          `Downloads may stall or fail if storage runs out.\n\n` +
+          `Start anyway?`
+        )
+        if (!proceed) return
+      }
+    }
     for (const item of queue) {
       if (item.status === 'staged' || item.status === 'paused') {
         startTask(item.id)
@@ -168,6 +208,21 @@
           <span>Auto-Download: OFF</span>
         {/if}
       </button>
+
+      <!-- Target Storage Drive Space Indicator -->
+      {#if queueDiskInfo}
+        {@const isStorageLow = queueDiskInfo.availableBytes < 10 * 1024 * 1024 * 1024}
+        <div
+          class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border transition-colors {isStorageLow ? 'bg-rose-500/15 text-rose-300 border-rose-500/40' : 'bg-dark-800 text-slate-300 border-dark-700'}"
+          title="Available drive space on {queueDiskInfo.path}"
+        >
+          <HardDrive class="w-3.5 h-3.5 {isStorageLow ? 'text-rose-400 animate-pulse' : 'text-accent-cyan'}" />
+          <span>Drive: <span class="font-bold {isStorageLow ? 'text-rose-400' : 'text-white'}">{formatBytes(queueDiskInfo.availableBytes)} free</span></span>
+          {#if isStorageLow}
+            <span class="text-[10px] px-1 rounded bg-rose-500/30 text-rose-200 font-bold uppercase">Low</span>
+          {/if}
+        </div>
+      {/if}
     </div>
 
     <!-- Actions: Red Cancel Button & Staged/Clear actions -->

@@ -5,6 +5,8 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+
+	"hf-downloader/internal/platform"
 )
 
 // PartFileWriter provides safe concurrent WriteAt operations on a partially downloaded file.
@@ -20,6 +22,22 @@ func NewPartFileWriter(partPath string, totalSize int64) (*PartFileWriter, error
 	dir := filepath.Dir(partPath)
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return nil, fmt.Errorf("failed to create destination folder %s: %w", dir, err)
+	}
+
+	// Safety check: verify storage drive has enough space to prevent mid-download stalls or system errors
+	if totalSize > 0 {
+		if spaceInfo, spaceErr := platform.CheckDiskSpace(dir); spaceErr == nil {
+			var currentSize int64
+			if fi, statErr := os.Stat(partPath); statErr == nil {
+				currentSize = fi.Size()
+			}
+			needed := totalSize - currentSize
+			const safetyBuffer = 50 * 1024 * 1024 // 50MB reserve buffer
+			if needed > 0 && spaceInfo.AvailableBytes < uint64(needed+safetyBuffer) {
+				return nil, fmt.Errorf("insufficient disk space on %s: need %s, only %s available",
+					spaceInfo.Path, FormatBytes(needed), FormatBytes(int64(spaceInfo.AvailableBytes)))
+			}
+		}
 	}
 
 	f, err := os.OpenFile(partPath, os.O_RDWR|os.O_CREATE, 0644)
@@ -52,7 +70,11 @@ func (w *PartFileWriter) WriteAt(p []byte, off int64) (int, error) {
 	if w.file == nil {
 		return 0, fmt.Errorf("part file is closed")
 	}
-	return w.file.WriteAt(p, off)
+	n, err := w.file.WriteAt(p, off)
+	if err != nil {
+		return n, fmt.Errorf("write error (possible disk full or I/O failure): %w", err)
+	}
+	return n, nil
 }
 
 // Sync commits the current contents of the file to stable storage.

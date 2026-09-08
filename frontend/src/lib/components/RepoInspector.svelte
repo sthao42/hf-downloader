@@ -2,6 +2,8 @@
   import { createEventDispatcher } from 'svelte'
   import type { FileNode, ParsedTarget } from '../types'
   import { formatBytes, detectQuantBadge } from '../utils'
+  import { fetchDiskSpace } from '../stores/disk'
+  import type { platform } from '../../../wailsjs/go/models'
   import {
     FileText,
     Download,
@@ -25,6 +27,18 @@
   let selectedMap: Record<string, boolean> = {}
   let searchFilter: string = ''
   let activeCategory: 'all' | 'safetensors' | 'gguf' | 'text_encoders' | 'vae' = 'all'
+
+  let diskInfo: platform.DiskSpaceInfo | null = null
+  let lastCheckedDir: string = ''
+
+  $: primaryDestDir = (selectedFiles[0] && selectedFiles[0].dest) || (files[0] && defaultDestinations[files[0].path]) || ''
+
+  $: if (primaryDestDir && primaryDestDir !== lastCheckedDir) {
+    lastCheckedDir = primaryDestDir
+    fetchDiskSpace(primaryDestDir).then(info => {
+      diskInfo = info
+    })
+  }
 
   // Initialize all files as selected on load
   $: if (files) {
@@ -71,6 +85,23 @@
 
   function handleStage(autoStart: boolean) {
     if (selectedFiles.length === 0) return
+
+    // Storage safety check: prompt if available disk space is insufficient
+    if (diskInfo && totalSelectedBytes > 0) {
+      const buffer = 100 * 1024 * 1024 // 100MB reserve buffer
+      if (diskInfo.availableBytes < totalSelectedBytes + buffer) {
+        const neededStr = formatBytes(totalSelectedBytes)
+        const availStr = formatBytes(diskInfo.availableBytes)
+        const proceed = confirm(
+          `Storage Drive Warning:\n\n` +
+          `Destination drive (${diskInfo.path}) only has ${availStr} available, but selected files require ${neededStr}.\n\n` +
+          `Downloading may stall or fail if storage runs out.\n\n` +
+          `Do you want to proceed anyway?`
+        )
+        if (!proceed) return
+      }
+    }
+
     dispatch('stage', { selectedFiles, autoStart })
   }
 
@@ -103,8 +134,27 @@
         </h2>
       </div>
 
-      <!-- Action Buttons -->
+      <!-- Action Buttons & Storage Space Safety Indicator -->
       <div class="flex items-center gap-2 flex-wrap">
+        {#if diskInfo}
+          {@const isSpaceShort = diskInfo.availableBytes < totalSelectedBytes + 100 * 1024 * 1024}
+          <div
+            class="px-3 py-2 rounded-xl text-xs font-medium flex items-center gap-1.5 transition-colors border {isSpaceShort ? 'bg-rose-500/15 border-rose-500/40 text-rose-300' : 'bg-dark-800/80 border-dark-700 text-slate-300'}"
+            title="Available storage on {diskInfo.path}"
+          >
+            <HardDrive class="w-3.5 h-3.5 {isSpaceShort ? 'text-rose-400 animate-pulse' : 'text-accent-cyan'}" />
+            <span>Drive:</span>
+            <span class="font-bold {isSpaceShort ? 'text-rose-400' : 'text-white'}">
+              {formatBytes(diskInfo.availableBytes)} free
+            </span>
+            {#if isSpaceShort && totalSelectedBytes > 0}
+              <span class="px-1.5 py-0.5 rounded bg-rose-500/30 text-rose-200 text-[10px] uppercase font-bold tracking-wider">
+                Low
+              </span>
+            {/if}
+          </div>
+        {/if}
+
         <button
           type="button"
           on:click={handleOpenRouter}

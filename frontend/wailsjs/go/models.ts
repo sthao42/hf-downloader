@@ -275,3 +275,26 @@ export namespace main {
 
 }
 
+export namespace platform {
+	
+	export class DiskSpaceInfo {
+	    path: string;
+	    freeBytes: number;
+	    totalBytes: number;
+	    availableBytes: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new DiskSpaceInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.path = source["path"];
+	        this.freeBytes = source["freeBytes"];
+	        this.totalBytes = source["totalBytes"];
+	        this.availableBytes = source["availableBytes"];
+	    }
+	}
+
+}
+

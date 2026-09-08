@@ -14,6 +14,7 @@ import (
 	"hf-downloader/internal/config"
 	"hf-downloader/internal/downloader"
 	"hf-downloader/internal/hfapi"
+	"hf-downloader/internal/platform"
 )
 
 // InspectResponse contains the parsed target details and discovered files.
@@ -233,4 +234,9 @@ func (a *App) OpenFolder(folderPath string) error {
 	default:
 		return exec.Command("xdg-open", folderPath).Start()
 	}
+}
+
+// CheckDiskSpace returns drive free and total space for the destination folder path.
+func (a *App) CheckDiskSpace(targetPath string) (platform.DiskSpaceInfo, error) {
+	return platform.CheckDiskSpace(targetPath)
 }

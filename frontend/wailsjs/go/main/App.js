@@ -10,6 +10,10 @@ export function CancelItem(arg1) {
   return window['go']['main']['App']['CancelItem'](arg1);
 }
 
+export function CheckDiskSpace(arg1) {
+  return window['go']['main']['App']['CheckDiskSpace'](arg1);
+}
+
 export function DeleteBookmark(arg1) {
   return window['go']['main']['App']['DeleteBookmark'](arg1);
 }

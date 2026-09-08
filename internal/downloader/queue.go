@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"os"
 	"path/filepath"
 	"sync"
 	"time"
@@ -11,6 +12,7 @@ import (
 	"github.com/google/uuid"
 	"hf-downloader/internal/config"
 	"hf-downloader/internal/hfapi"
+	"hf-downloader/internal/platform"
 )
 
 // ItemStatus defines the lifecycle status of a download task.
@@ -383,6 +385,34 @@ func (qm *QueueManager) executeDownload(item DownloadItem) {
 			totalSize = insp.ContentLength
 		}
 		acceptRanges = insp.AcceptRanges
+	}
+
+	// Step 2.5: Safety check storage drive space to ensure sufficient room and prevent stalls
+	if totalSize > 0 {
+		if spaceInfo, spaceErr := platform.CheckDiskSpace(item.DestinationDir); spaceErr == nil {
+			neededBytes := totalSize
+			partPath := filepath.Join(item.DestinationDir, item.FinalFilename+".part")
+			if fi, statErr := os.Stat(partPath); statErr == nil && fi.Size() > 0 {
+				if fi.Size() < totalSize {
+					neededBytes = totalSize - fi.Size()
+				} else {
+					neededBytes = 0
+				}
+			}
+
+			// Require additional 100 MB buffer to prevent drive exhaustion and OS stalls
+			const safetyBuffer = 100 * 1024 * 1024
+			if neededBytes > 0 && spaceInfo.AvailableBytes < uint64(neededBytes+safetyBuffer) {
+				qm.updateItemStatus(item.ID, func(it *DownloadItem) {
+					it.Status = StatusFailed
+					it.ErrorMessage = fmt.Sprintf("Insufficient disk space on %s: needs %s (+100MB buffer), only %s available",
+						spaceInfo.Path, FormatBytes(neededBytes), FormatBytes(int64(spaceInfo.AvailableBytes)))
+					it.SpeedBPS = 0
+					it.SpeedFormatted = ""
+				})
+				return
+			}
+		}
 	}
 
 	qm.updateItemStatus(item.ID, func(it *DownloadItem) {
