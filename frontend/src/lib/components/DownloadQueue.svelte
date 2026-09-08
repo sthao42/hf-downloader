@@ -503,16 +503,33 @@
             ></div>
           </div>
 
-          <!-- Bottom Row: Speed, ETA, Bytes -->
-          <div class="flex items-center justify-between text-xs font-mono text-slate-400 flex-wrap gap-2">
-            <div class="flex items-center gap-3">
-              <span>{item.progress ? item.progress.toFixed(1) : '0.0'}%</span>
-              <span>
-                {formatBytes(item.downloadedBytes || 0)} / {formatBytes(item.size || 0)}
+          <!-- Bottom Row: Speed, ETA, Bytes, Expected SHA-256 -->
+          <div class="flex items-center justify-between text-xs font-mono text-slate-400 flex-wrap gap-y-1.5 gap-x-3">
+            <div class="flex items-center gap-2.5 flex-wrap min-w-0">
+              <span class="text-slate-300 dark:text-slate-300 font-medium">
+                {item.progress ? item.progress.toFixed(1) : '0.0'}%
               </span>
+              <span>
+                {item.status === 'completed'
+                  ? formatBytes(item.size || item.downloadedBytes || 0)
+                  : `${formatBytes(item.downloadedBytes || 0)} / ${formatBytes(item.size || 0)}`}
+              </span>
+
+              {#if item.status === 'completed' && item.expectedSha256}
+                <div class="flex items-center gap-1.5 min-w-0 text-[11px]">
+                  <span class="text-slate-600 dark:text-slate-600">•</span>
+                  <span class="font-semibold text-slate-500 dark:text-slate-400 flex-shrink-0">SHA-256:</span>
+                  <span
+                    class="font-mono text-slate-600 dark:text-slate-300 select-all truncate max-w-[260px] sm:max-w-sm md:max-w-md lg:max-w-lg xl:max-w-2xl cursor-text"
+                    title="Expected remote SHA-256: {item.expectedSha256}"
+                  >
+                    {item.expectedSha256}
+                  </span>
+                </div>
+              {/if}
             </div>
 
-            <div class="flex items-center gap-3">
+            <div class="flex items-center gap-3 flex-shrink-0">
               {#if item.status === 'downloading'}
                 {#if item.speedFormatted}
                   <span class="text-accent-cyan font-semibold">{item.speedFormatted}</span>
@@ -521,7 +538,10 @@
                   <span class="text-slate-400">ETA: {formatETA(item.etaSeconds)}</span>
                 {/if}
               {:else if item.status === 'completed'}
-                <span class="text-emerald-400 font-medium">Download Finished</span>
+                <span class="text-emerald-500 dark:text-emerald-400 font-medium flex items-center gap-1">
+                  <CheckCircle2 class="w-3.5 h-3.5" />
+                  <span>Download Finished</span>
+                </span>
               {:else if item.status === 'failed' && item.errorMessage}
                 <span class="text-rose-400 font-medium truncate max-w-sm">{item.errorMessage}</span>
               {/if}
