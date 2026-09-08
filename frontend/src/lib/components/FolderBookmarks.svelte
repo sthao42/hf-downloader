@@ -324,7 +324,7 @@
             on:dragover={(e) => handleDragOverRecent(e, recent)}
             on:drop={handleDropRecent}
             on:dragend={handleDragEndRecent}
-            class="inline-flex items-center rounded-lg border cursor-grab active:cursor-grabbing transition-all duration-150 {isRecentDragging ? 'opacity-30 border-2 border-dashed border-accent-indigo bg-accent-indigo/10 scale-95 shadow-inner' : 'bg-dark-900 hover:bg-dark-800 border-dark-700 hover:border-slate-500'}"
+            class="group inline-flex items-center rounded-lg border cursor-grab active:cursor-grabbing transition-all duration-150 {isRecentDragging ? 'opacity-30 border-2 border-dashed border-accent-indigo bg-accent-indigo/10 scale-95 shadow-inner' : 'bg-dark-900 hover:bg-dark-800 border-dark-700 hover:border-slate-500'}"
           >
             <div
               class="pl-2 pr-0.5 py-1 text-slate-500 hover:text-accent-indigo transition-colors"
@@ -346,7 +346,7 @@
               type="button"
               draggable="false"
               on:click={(e) => handleRemoveRecent(e, recent)}
-              class="p-1 mr-1 text-rose-500/80 hover:text-rose-400 hover:bg-rose-500/20 active:bg-rose-500/30 rounded transition-colors flex items-center justify-center flex-shrink-0"
+              class="opacity-0 group-hover:opacity-100 p-1 mr-1 text-rose-500/80 hover:text-rose-400 hover:bg-rose-500/20 active:bg-rose-500/30 rounded transition-all duration-150 flex items-center justify-center flex-shrink-0"
               title="Remove {recent}"
               aria-label="Remove {recent}"
             >
