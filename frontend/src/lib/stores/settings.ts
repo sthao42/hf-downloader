@@ -38,6 +38,21 @@ export async function reorderRecentPaths(paths: string[]) {
   }
 }
 
+export async function removeRecentPath(pathToRemove: string) {
+  let updatedPaths: string[] = []
+  settingsStore.update(s => {
+    if (!s) return s
+    updatedPaths = (s.recentPaths || []).filter(p => p !== pathToRemove)
+    return config.Settings.createFrom({ ...s, recentPaths: updatedPaths })
+  })
+  try {
+    await UpdateRecentPaths(updatedPaths)
+  } catch (err) {
+    console.error('Failed to remove recent path:', err)
+  }
+}
+
+
 export async function openTokenPage() {
   try {
     await OpenHFTokenPage()

@@ -1,8 +1,8 @@
 <script lang="ts">
   import { bookmarksStore, createBookmark, removeBookmark, browseDirectory, reorderBookmarks } from '../stores/bookmarks'
-  import { settingsStore, reorderRecentPaths } from '../stores/settings'
+  import { settingsStore, reorderRecentPaths, removeRecentPath } from '../stores/settings'
   import { openTaskFolder } from '../stores/queue'
-  import { Bookmark, Plus, Trash2, FolderOpen, ExternalLink, HardDrive, GripVertical } from 'lucide-svelte'
+  import { Bookmark, Plus, Trash2, FolderOpen, ExternalLink, HardDrive, GripVertical, X } from 'lucide-svelte'
   import { flip } from 'svelte/animate'
   import { cubicOut } from 'svelte/easing'
   import type { FolderBookmark } from '../types'
@@ -127,6 +127,13 @@
       lastSwapRecentPath = null
       await reorderRecentPaths(localRecentPaths)
     }
+  }
+
+  async function handleRemoveRecent(e: MouseEvent, pathToRemove: string) {
+    e.preventDefault()
+    e.stopPropagation()
+    localRecentPaths = localRecentPaths.filter(p => p !== pathToRemove)
+    await removeRecentPath(pathToRemove)
   }
 
   async function handleBrowse() {
@@ -329,11 +336,21 @@
               type="button"
               draggable="false"
               on:click={() => openTaskFolder(recent)}
-              class="pr-2.5 py-1 text-xs font-mono text-slate-400 hover:text-slate-200 flex items-center gap-1.5 transition-colors"
+              class="py-1 pl-1 pr-1.5 text-xs font-mono text-slate-400 hover:text-slate-200 flex items-center gap-1.5 transition-colors min-w-0"
               title="Open {recent}"
             >
               <FolderOpen class="w-3 h-3 text-slate-500" />
               <span class="max-w-[200px] truncate">{recent}</span>
+            </button>
+            <button
+              type="button"
+              draggable="false"
+              on:click={(e) => handleRemoveRecent(e, recent)}
+              class="p-1 mr-1 text-rose-500/80 hover:text-rose-400 hover:bg-rose-500/20 active:bg-rose-500/30 rounded transition-colors flex items-center justify-center flex-shrink-0"
+              title="Remove {recent}"
+              aria-label="Remove {recent}"
+            >
+              <X class="w-3 h-3" />
             </button>
           </div>
         {/each}
