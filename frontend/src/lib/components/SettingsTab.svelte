@@ -2,7 +2,7 @@
   import { settingsStore, persistSettings, openTokenPage } from '../stores/settings'
   import { browseDirectory } from '../stores/bookmarks'
   import type { Settings, RoutingRule } from '../types'
-  import { Settings as SettingsIcon, Save, KeyRound, ExternalLink, HardDrive, Plus, Trash2, Cpu } from 'lucide-svelte'
+  import { Settings as SettingsIcon, Save, KeyRound, ExternalLink, HardDrive, Plus, Trash2, Cpu, FolderOpen } from 'lucide-svelte'
 
   let localSettings: Settings | null = null
   let saving: boolean = false
@@ -22,6 +22,7 @@
     const chosen = await browseDirectory(localSettings.defaultDownloadDir || '')
     if (chosen) {
       localSettings.defaultDownloadDir = chosen
+      await handleSave()
     }
   }
 
@@ -85,61 +86,72 @@
       </button>
     </div>
 
-    <!-- General Preferences -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-      <!-- Hugging Face Token -->
-      <div class="bg-dark-900 border border-dark-700/70 rounded-xl p-4 flex flex-col gap-3">
-        <div class="flex items-center justify-between">
-          <label for="hf-token-input" class="text-xs font-bold text-slate-200 flex items-center gap-1.5">
-            <KeyRound class="w-4 h-4 text-accent-cyan" />
-            <span>Hugging Face Access Token</span>
-          </label>
-          <button
-            type="button"
-            on:click={openTokenPage}
-            class="text-[11px] text-accent-indigo hover:underline flex items-center gap-1"
-          >
-            <span>Get Token</span>
-            <ExternalLink class="w-3 h-3" />
-          </button>
-        </div>
-        <input
-          id="hf-token-input"
-          type="password"
-          bind:value={localSettings.hfToken}
-          placeholder="hf_..."
-          class="w-full px-3 py-2 bg-dark-950 border border-dark-700 rounded-lg text-xs text-slate-100 font-mono focus:outline-none focus:border-accent-indigo"
-        />
-        <p class="text-[11px] text-slate-500">
-          Enables downloading gated models like FLUX.1-dev, SD3, and Llama 3.
+    <!-- Default Download Location Section -->
+    <div class="bg-dark-900 border border-dark-700/70 rounded-xl p-5 flex flex-col gap-3.5 shadow-sm">
+      <div>
+        <label for="default-download-location-input" class="text-sm font-bold text-slate-100 dark:text-white flex items-center gap-2">
+          <FolderOpen class="w-4 h-4 text-accent-indigo" />
+          <span>Default Download Location</span>
+        </label>
+        <p class="text-xs text-slate-400 dark:text-slate-400 mt-1">
+          The default download directory path used whenever you paste in a Hugging Face link. Files will download here unless matched by a path routing rule.
         </p>
       </div>
 
-      <!-- Default Download Directory -->
-      <div class="bg-dark-900 border border-dark-700/70 rounded-xl p-4 flex flex-col gap-3">
-        <label for="default-dir-input" class="text-xs font-bold text-slate-200 flex items-center gap-1.5">
-          <HardDrive class="w-4 h-4 text-accent-indigo" />
-          <span>Default Download Folder</span>
-        </label>
-        <div class="flex items-center gap-2">
-          <input
-            id="default-dir-input"
-            type="text"
-            bind:value={localSettings.defaultDownloadDir}
-            class="w-full px-3 py-2 bg-dark-950 border border-dark-700 rounded-lg text-xs text-slate-200 font-mono focus:outline-none focus:border-accent-indigo"
-          />
-          <button
-            type="button"
-            on:click={handleBrowseDefaultDir}
-            class="px-3 py-2 bg-dark-800 hover:bg-dark-700 text-slate-200 rounded-lg border border-dark-700 text-xs flex-shrink-0"
-          >
-            Browse
-          </button>
-        </div>
-        <p class="text-[11px] text-slate-500">
-          Used when a file does not match any specific auto-routing rules.
-        </p>
+      <div class="relative flex items-center">
+        <input
+          id="default-download-location-input"
+          type="text"
+          bind:value={localSettings.defaultDownloadDir}
+          placeholder="C:\Users\*username*\Downloads"
+          class="w-full pl-3.5 pr-12 py-2.5 bg-dark-950 border border-dark-700 rounded-xl text-xs text-slate-100 font-mono placeholder:text-slate-500 focus:outline-none focus:border-accent-indigo focus:ring-1 focus:ring-accent-indigo transition-all shadow-inner"
+        />
+        <button
+          type="button"
+          on:click={handleBrowseDefaultDir}
+          class="absolute right-1.5 p-2 bg-dark-800 hover:bg-dark-700 active:bg-dark-750 text-accent-indigo hover:text-accent-cyan rounded-lg border border-dark-700/80 hover:border-slate-500 transition-all flex items-center justify-center group"
+          title="Open Windows Explorer to locate and select a new default download path"
+          aria-label="Open Windows Explorer to select default download path"
+        >
+          <FolderOpen class="w-4 h-4 group-hover:scale-110 transition-transform" />
+        </button>
       </div>
+
+      {#if localSettings.defaultDownloadDir}
+        <div class="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1.5 font-mono truncate">
+          <span class="text-slate-600 dark:text-slate-500">•</span>
+          <span>Current Default Path:</span>
+          <span class="text-slate-300 dark:text-slate-200 truncate">{localSettings.defaultDownloadDir}</span>
+        </div>
+      {/if}
+    </div>
+
+    <!-- Hugging Face Access Token Section -->
+    <div class="bg-dark-900 border border-dark-700/70 rounded-xl p-5 flex flex-col gap-3 shadow-sm">
+      <div class="flex items-center justify-between">
+        <label for="hf-token-input" class="text-sm font-bold text-slate-100 dark:text-white flex items-center gap-2">
+          <KeyRound class="w-4 h-4 text-accent-cyan" />
+          <span>Hugging Face Access Token</span>
+        </label>
+        <button
+          type="button"
+          on:click={openTokenPage}
+          class="text-xs text-accent-indigo hover:text-indigo-400 hover:underline flex items-center gap-1 font-medium transition-colors"
+        >
+          <span>Get Token</span>
+          <ExternalLink class="w-3 h-3" />
+        </button>
+      </div>
+      <input
+        id="hf-token-input"
+        type="password"
+        bind:value={localSettings.hfToken}
+        placeholder="hf_..."
+        class="w-full px-3.5 py-2.5 bg-dark-950 border border-dark-700 rounded-xl text-xs text-slate-100 font-mono focus:outline-none focus:border-accent-indigo focus:ring-1 focus:ring-accent-indigo transition-all shadow-inner"
+      />
+      <p class="text-xs text-slate-400 dark:text-slate-400">
+        Enables downloading gated models like FLUX.1-dev, SD3, and Llama 3 without authentication prompts.
+      </p>
     </div>
 
     <!-- Concurrency Limits -->

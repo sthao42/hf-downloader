@@ -3,6 +3,7 @@
   import type { FileNode, ParsedTarget } from '../types'
   import { formatBytes, detectQuantBadge } from '../utils'
   import { fetchDiskSpace } from '../stores/disk'
+  import { settingsStore } from '../stores/settings'
   import type { platform } from '../../../wailsjs/go/models'
   import {
     FileText,
@@ -34,7 +35,7 @@
   let diskInfo: platform.DiskSpaceInfo | null = null
   let lastCheckedDir: string = ''
 
-  $: primaryDestDir = (selectedFiles[0] && selectedFiles[0].dest) || (files[0] && defaultDestinations[files[0].path]) || ''
+  $: primaryDestDir = (selectedFiles[0] && selectedFiles[0].dest) || (files[0] && defaultDestinations[files[0].path]) || $settingsStore?.defaultDownloadDir || ''
 
   $: if (primaryDestDir && primaryDestDir !== lastCheckedDir) {
     lastCheckedDir = primaryDestDir
@@ -377,7 +378,7 @@
                   <!-- Pre-routed destination indicator -->
                   <div class="text-[11px] text-slate-500 flex items-center gap-1 mt-0.5 truncate">
                     <HardDrive class="w-3 h-3 text-slate-600 flex-shrink-0" />
-                    <span class="truncate">{defaultDestinations[file.path] || 'Default Folder'}</span>
+                    <span class="truncate">{defaultDestinations[file.path] || $settingsStore?.defaultDownloadDir || 'Default Folder'}</span>
                   </div>
                 </div>
               </label>
