@@ -1,5 +1,6 @@
 /** @type {import('tailwindcss').Config} */
 export default {
+  darkMode: 'class',
   content: [
     "./index.html",
     "./src/**/*.{svelte,js,ts,jsx,tsx}",
@@ -8,12 +9,12 @@ export default {
     extend: {
       colors: {
         dark: {
-          950: '#070a13',
-          900: '#0b0f19',
-          850: '#111726',
-          800: '#161f33',
-          700: '#222f4c',
-          600: '#334155',
+          950: 'var(--color-dark-950)',
+          900: 'var(--color-dark-900)',
+          850: 'var(--color-dark-850)',
+          800: 'var(--color-dark-800)',
+          700: 'var(--color-dark-700)',
+          600: 'var(--color-dark-600)',
         },
         accent: {
           cyan: '#06b6d4',

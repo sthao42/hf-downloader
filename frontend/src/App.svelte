@@ -23,8 +23,11 @@
     Settings as SettingsIcon,
     AlertCircle,
     Zap,
-    KeyRound
+    KeyRound,
+    Sun,
+    Moon
   } from 'lucide-svelte'
+  import { theme, initTheme, toggleTheme } from './lib/stores/theme'
 
   let activeTab: 'inspector' | 'queue' | 'bookmarks' | 'settings' = 'inspector'
   let loadingInspection: boolean = false
@@ -50,6 +53,7 @@
     : ''
 
   onMount(() => {
+    initTheme()
     // Initial data load
     fetchSettings()
     fetchBookmarks()
@@ -179,7 +183,7 @@
       </div>
       <div>
         <h1 class="text-sm font-black tracking-tight text-white flex items-center gap-2">
-          <span>HF Model Downloader</span>
+          <span>HF Downloader</span>
           <span class="text-[10px] px-1.5 py-0.5 rounded font-mono bg-dark-700/70 text-accent-indigo font-bold border border-dark-600">v1.0</span>
         </h1>
         <p class="text-[11px] text-slate-500">Multi-Socket Range Downloader & Path Router</p>
@@ -246,6 +250,20 @@
         title="HF Access Token Settings"
       >
         <KeyRound class="w-4 h-4 {$settingsStore?.hfToken ? 'text-emerald-400' : 'text-slate-400'}" />
+      </button>
+
+      <!-- Theme Toggle Button -->
+      <button
+        type="button"
+        on:click={toggleTheme}
+        class="p-2 rounded-xl bg-dark-800 hover:bg-dark-700 text-slate-400 hover:text-slate-200 border border-dark-700 transition-colors flex items-center justify-center"
+        title={$theme === 'dark' ? 'Switch to Light Theme' : 'Switch to Dark Theme'}
+      >
+        {#if $theme === 'dark'}
+          <Sun class="w-4 h-4 text-amber-400" />
+        {:else}
+          <Moon class="w-4 h-4 text-accent-indigo" />
+        {/if}
       </button>
     </div>
   </header>
