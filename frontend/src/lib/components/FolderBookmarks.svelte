@@ -3,91 +3,130 @@
   import { settingsStore, reorderRecentPaths } from '../stores/settings'
   import { openTaskFolder } from '../stores/queue'
   import { Bookmark, Plus, Trash2, FolderOpen, ExternalLink, HardDrive, GripVertical } from 'lucide-svelte'
+  import { flip } from 'svelte/animate'
+  import { cubicOut } from 'svelte/easing'
+  import type { FolderBookmark } from '../types'
 
   let newLabel: string = ''
   let newPath: string = ''
   let showAddForm: boolean = false
   let adding: boolean = false
 
-  // Drag-and-drop state for saved folder bookmarks
-  let draggedBMIndex: number | null = null
-  let dragOverBMIndex: number | null = null
+  // Local synced array for bookmarks to enable live interactive displacement
+  let localBookmarks: FolderBookmark[] = []
+  let draggedBMId: string | null = null
+  let lastSwapBMId: string | null = null
 
-  // Drag-and-drop state for quick picks / recent paths
-  let draggedRecentIndex: number | null = null
-  let dragOverRecentIndex: number | null = null
-
-  function handleDragStartBM(e: DragEvent, index: number) {
-    draggedBMIndex = index
-    if (e.dataTransfer) {
-      e.dataTransfer.effectAllowed = 'move'
-      e.dataTransfer.setData('text/plain', String(index))
+  // Keep localBookmarks in sync with store when not actively dragging
+  $: if ($bookmarksStore) {
+    if (draggedBMId === null) {
+      localBookmarks = [...$bookmarksStore]
     }
   }
 
-  function handleDragOverBM(e: DragEvent, index: number) {
+  // Local synced array for recent paths / quick picks
+  let localRecentPaths: string[] = []
+  let draggedRecentPath: string | null = null
+  let lastSwapRecentPath: string | null = null
+
+  $: if ($settingsStore?.recentPaths) {
+    if (draggedRecentPath === null) {
+      localRecentPaths = [...$settingsStore.recentPaths]
+    }
+  }
+
+  // Drag handlers for saved bookmarks with live fluid push animation
+  function handleDragStartBM(e: DragEvent, id: string) {
+    draggedBMId = id
+    lastSwapBMId = null
+    if (e.dataTransfer) {
+      e.dataTransfer.effectAllowed = 'move'
+      e.dataTransfer.setData('text/plain', id)
+    }
+  }
+
+  function handleDragOverBM(e: DragEvent, targetId: string) {
     e.preventDefault()
     if (e.dataTransfer) {
       e.dataTransfer.dropEffect = 'move'
     }
-    dragOverBMIndex = index
-  }
+    if (!draggedBMId || draggedBMId === targetId || lastSwapBMId === targetId) return
 
-  function handleDropBM(e: DragEvent, targetIndex: number) {
-    e.preventDefault()
-    if (draggedBMIndex === null || draggedBMIndex === targetIndex) {
-      draggedBMIndex = null
-      dragOverBMIndex = null
-      return
+    const fromIndex = localBookmarks.findIndex(b => b.id === draggedBMId)
+    const toIndex = localBookmarks.findIndex(b => b.id === targetId)
+
+    if (fromIndex !== -1 && toIndex !== -1 && fromIndex !== toIndex) {
+      lastSwapBMId = targetId
+      const updated = [...localBookmarks]
+      const [moved] = updated.splice(fromIndex, 1)
+      updated.splice(toIndex, 0, moved)
+      localBookmarks = updated
     }
-    const items = [...$bookmarksStore]
-    const [moved] = items.splice(draggedBMIndex, 1)
-    items.splice(targetIndex, 0, moved)
-    reorderBookmarks(items)
-    draggedBMIndex = null
-    dragOverBMIndex = null
   }
 
-  function handleDragEndBM() {
-    draggedBMIndex = null
-    dragOverBMIndex = null
+  async function handleDropBM(e: DragEvent) {
+    e.preventDefault()
+    if (draggedBMId !== null) {
+      draggedBMId = null
+      lastSwapBMId = null
+      bookmarksStore.set(localBookmarks)
+      await reorderBookmarks(localBookmarks)
+    }
   }
 
-  function handleDragStartRecent(e: DragEvent, index: number) {
-    draggedRecentIndex = index
+  async function handleDragEndBM() {
+    if (draggedBMId !== null) {
+      draggedBMId = null
+      lastSwapBMId = null
+      bookmarksStore.set(localBookmarks)
+      await reorderBookmarks(localBookmarks)
+    }
+  }
+
+  // Drag handlers for quick picks / recent paths with live fluid push animation
+  function handleDragStartRecent(e: DragEvent, path: string) {
+    draggedRecentPath = path
+    lastSwapRecentPath = null
     if (e.dataTransfer) {
       e.dataTransfer.effectAllowed = 'move'
-      e.dataTransfer.setData('text/plain', String(index))
+      e.dataTransfer.setData('text/plain', path)
     }
   }
 
-  function handleDragOverRecent(e: DragEvent, index: number) {
+  function handleDragOverRecent(e: DragEvent, targetPath: string) {
     e.preventDefault()
     if (e.dataTransfer) {
       e.dataTransfer.dropEffect = 'move'
     }
-    dragOverRecentIndex = index
-  }
+    if (!draggedRecentPath || draggedRecentPath === targetPath || lastSwapRecentPath === targetPath) return
 
-  function handleDropRecent(e: DragEvent, targetIndex: number) {
-    e.preventDefault()
-    const recentList = $settingsStore?.recentPaths || []
-    if (draggedRecentIndex === null || draggedRecentIndex === targetIndex || !recentList.length) {
-      draggedRecentIndex = null
-      dragOverRecentIndex = null
-      return
+    const fromIndex = localRecentPaths.indexOf(draggedRecentPath)
+    const toIndex = localRecentPaths.indexOf(targetPath)
+
+    if (fromIndex !== -1 && toIndex !== -1 && fromIndex !== toIndex) {
+      lastSwapRecentPath = targetPath
+      const updated = [...localRecentPaths]
+      const [moved] = updated.splice(fromIndex, 1)
+      updated.splice(toIndex, 0, moved)
+      localRecentPaths = updated
     }
-    const items = [...recentList]
-    const [moved] = items.splice(draggedRecentIndex, 1)
-    items.splice(targetIndex, 0, moved)
-    reorderRecentPaths(items)
-    draggedRecentIndex = null
-    dragOverRecentIndex = null
   }
 
-  function handleDragEndRecent() {
-    draggedRecentIndex = null
-    dragOverRecentIndex = null
+  async function handleDropRecent(e: DragEvent) {
+    e.preventDefault()
+    if (draggedRecentPath !== null) {
+      draggedRecentPath = null
+      lastSwapRecentPath = null
+      await reorderRecentPaths(localRecentPaths)
+    }
+  }
+
+  async function handleDragEndRecent() {
+    if (draggedRecentPath !== null) {
+      draggedRecentPath = null
+      lastSwapRecentPath = null
+      await reorderRecentPaths(localRecentPaths)
+    }
   }
 
   async function handleBrowse() {
@@ -123,7 +162,7 @@
       <Bookmark class="w-4 h-4 text-accent-cyan" />
       <h3 class="text-sm font-bold text-white tracking-tight">Folder Bookmarks & Quick Picks</h3>
       <span class="text-[10px] text-slate-500 font-mono hidden sm:inline-block ml-1">
-        • Click and drag to reorder
+        • Drag cards to reorder live
       </span>
     </div>
     <button
@@ -182,33 +221,36 @@
     </form>
   {/if}
 
-  <!-- Bookmarks Cards Grid with Click & Drag Reordering -->
-  {#if $bookmarksStore.length === 0}
+  <!-- Bookmarks Cards Grid with Live Push & Slide Animation -->
+  {#if localBookmarks.length === 0}
     <div class="py-8 text-center text-slate-500 text-xs border border-dashed border-dark-700/60 rounded-xl">
       No folder bookmarks saved yet. Click "Add Bookmark" above to save and organize your destination folders.
     </div>
   {:else}
-    <div role="list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-      {#each $bookmarksStore as bm, index (bm.id)}
-        {@const isDragging = draggedBMIndex === index}
-        {@const isDragOver = dragOverBMIndex === index && draggedBMIndex !== index}
+    <div
+      role="list"
+      class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3"
+      on:dragover|preventDefault
+      on:drop={handleDropBM}
+    >
+      {#each localBookmarks as bm (bm.id)}
+        {@const isDragging = draggedBMId === bm.id}
         <div
+          animate:flip={{ duration: 250, easing: cubicOut }}
           role="listitem"
           draggable="true"
-          on:dragstart={(e) => handleDragStartBM(e, index)}
-          on:dragover={(e) => handleDragOverBM(e, index)}
-          on:dragenter={() => (dragOverBMIndex = index)}
-          on:dragleave={() => { if (dragOverBMIndex === index) dragOverBMIndex = null }}
-          on:drop={(e) => handleDropBM(e, index)}
+          on:dragstart={(e) => handleDragStartBM(e, bm.id)}
+          on:dragover={(e) => handleDragOverBM(e, bm.id)}
+          on:drop={handleDropBM}
           on:dragend={handleDragEndBM}
-          class="p-3 bg-dark-900/90 border rounded-xl flex flex-col justify-between gap-2 group transition-all duration-150 {isDragging ? 'opacity-35 border-dashed border-accent-indigo scale-[0.98]' : isDragOver ? 'ring-2 ring-accent-indigo border-accent-indigo bg-indigo-950/25 scale-[1.02] shadow-lg shadow-indigo-500/15' : 'border-dark-700/70 hover:border-slate-600'}"
+          class="p-3 rounded-xl flex flex-col justify-between gap-2 group cursor-grab active:cursor-grabbing transition-all duration-150 {isDragging ? 'opacity-30 border-2 border-dashed border-accent-indigo bg-accent-indigo/10 scale-95 shadow-inner' : 'bg-dark-900/90 border border-dark-700/70 hover:border-slate-500 shadow-md hover:shadow-lg'}"
         >
           <div class="flex items-start justify-between gap-2">
             <!-- Drag Handle & Label -->
             <div class="flex items-start gap-1.5 min-w-0 flex-1">
               <div
-                class="cursor-grab active:cursor-grabbing p-0.5 -ml-1 text-slate-600 group-hover:text-slate-400 hover:text-slate-200 transition-colors flex-shrink-0 mt-0.5"
-                title="Click and drag to organize bookmarks"
+                class="p-0.5 -ml-1 text-slate-500 group-hover:text-accent-indigo transition-colors flex-shrink-0 mt-0.5"
+                title="Click and hold to drag"
               >
                 <GripVertical class="w-4 h-4" />
               </div>
@@ -248,35 +290,38 @@
     </div>
   {/if}
 
-  <!-- Recent Destination Paths / Quick Picks with Click & Drag Reordering -->
-  {#if $settingsStore?.recentPaths && $settingsStore.recentPaths.length > 0}
+  <!-- Recent Destination Paths / Quick Picks with Live Push & Slide Animation -->
+  {#if localRecentPaths && localRecentPaths.length > 0}
     <div class="pt-3 border-t border-dark-700/50">
       <div class="flex items-center justify-between mb-2">
         <span class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">
           Quick Picks & Recent Paths:
         </span>
         <span class="text-[10px] text-slate-500 font-mono">
-          Drag pills to reorganize
+          Drag pills to reorganize live
         </span>
       </div>
-      <div role="list" class="flex items-center gap-2 flex-wrap">
-        {#each $settingsStore.recentPaths as recent, rIdx (recent)}
-          {@const isRecentDragging = draggedRecentIndex === rIdx}
-          {@const isRecentDragOver = dragOverRecentIndex === rIdx && draggedRecentIndex !== rIdx}
+      <div
+        role="list"
+        class="flex items-center gap-2 flex-wrap"
+        on:dragover|preventDefault
+        on:drop={handleDropRecent}
+      >
+        {#each localRecentPaths as recent (recent)}
+          {@const isRecentDragging = draggedRecentPath === recent}
           <div
+            animate:flip={{ duration: 200, easing: cubicOut }}
             role="listitem"
             draggable="true"
-            on:dragstart={(e) => handleDragStartRecent(e, rIdx)}
-            on:dragover={(e) => handleDragOverRecent(e, rIdx)}
-            on:dragenter={() => (dragOverRecentIndex = rIdx)}
-            on:dragleave={() => { if (dragOverRecentIndex === rIdx) dragOverRecentIndex = null }}
-            on:drop={(e) => handleDropRecent(e, rIdx)}
+            on:dragstart={(e) => handleDragStartRecent(e, recent)}
+            on:dragover={(e) => handleDragOverRecent(e, recent)}
+            on:drop={handleDropRecent}
             on:dragend={handleDragEndRecent}
-            class="inline-flex items-center rounded-lg border transition-all duration-150 {isRecentDragging ? 'opacity-35 border-dashed border-accent-indigo scale-95' : isRecentDragOver ? 'ring-2 ring-accent-indigo border-accent-indigo bg-indigo-950/30 scale-105 shadow-md shadow-indigo-500/10' : 'bg-dark-900 hover:bg-dark-800 border-dark-700'}"
+            class="inline-flex items-center rounded-lg border cursor-grab active:cursor-grabbing transition-all duration-150 {isRecentDragging ? 'opacity-30 border-2 border-dashed border-accent-indigo bg-accent-indigo/10 scale-95 shadow-inner' : 'bg-dark-900 hover:bg-dark-800 border-dark-700 hover:border-slate-500'}"
           >
             <div
-              class="cursor-grab active:cursor-grabbing pl-2 pr-0.5 py-1 text-slate-600 hover:text-slate-300 transition-colors"
-              title="Drag to organize quick pick"
+              class="pl-2 pr-0.5 py-1 text-slate-500 hover:text-accent-indigo transition-colors"
+              title="Drag to reorganize"
             >
               <GripVertical class="w-3 h-3" />
             </div>
