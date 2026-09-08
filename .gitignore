@@ -12,10 +12,24 @@ bin/
 *.dll
 *.so
 *.dylib
+*.app/
+*.dmg
+*.deb
+*.rpm
+*.AppImage
+*.msi
+*.pdb
 package.json.md5
 frontend/package.json.md5
 
-# Frontend & dependencies
+# Release Assets & Packaging
+release-assets/
+*.zip
+*.tar.gz
+*.tgz
+*.sha256
+
+# Frontend, Frameworks & Dependencies
 node_modules/
 frontend/node_modules/
 dist/
@@ -24,6 +38,16 @@ dist-ssr/
 frontend/dist-ssr/
 .vite/
 frontend/.vite/
+.svelte-kit/
+frontend/.svelte-kit/
+.turbo/
+*.tsbuildinfo
+.eslintcache
+.stylelintcache
+.prettiercache
+.npm/
+.yarn/
+.pnpm-store/
 
 # Logs
 *.log
@@ -32,11 +56,12 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
-# IDEs and Code Editors
+# IDEs, Code Editors & Tooling
 .vscode/
 frontend/.vscode/
 *.code-workspace
 .idea/
+*.iml
 *.suo
 *.ntvs*
 *.njsproj
@@ -44,25 +69,46 @@ frontend/.vscode/
 *.swp
 *.swo
 *~
+*.sublime-project
+*.sublime-workspace
+.fleet/
+.cursor/
 
-# Go
+# Go & Testing
 *.test
 *.out
+*.coverprofile
+coverage/
+frontend/coverage/
+coverage.txt
+coverage.html
+profile.out
+c.out
 go.work
 go.work.sum
 vendor/
 
-# Temporary & Download State files
+# Temporary, Downloads & Cache
+downloads/
+test-downloads/
+temp/
 *.part
 *.part.json
 *.tmp
+*.bak
+*.orig
+*.rej
 
-# Environment / local credentials
+# Environment / Local Credentials & Secrets
 .env
 .env.*
 *.local
 credentials.json
 secrets.json
+*.pem
+*.key
+*.p12
+*.pfx
 
 # Operating System Files
 .DS_Store
@@ -70,6 +116,7 @@ secrets.json
 ._*
 .Spotlight-V100
 .Trashes
-Thumbs.db
-ehthumbs.db
-desktop.ini
+[Tt]humbs.db
+[Ee]hthumbs.db
+ehthumbs_vista.db
+[Dd]esktop.ini
