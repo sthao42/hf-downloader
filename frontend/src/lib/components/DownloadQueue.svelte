@@ -11,7 +11,6 @@
     Play,
     Pause,
     X,
-    FolderCheck,
     AlertCircle,
     CheckCircle2,
     Clock,
@@ -142,7 +141,7 @@
       if (queueDiskInfo.availableBytes < neededBytes + 100 * 1024 * 1024) {
         const proceed = confirm(
           `Storage Drive Warning:\n\n` +
-          `Destination drive (${queueDiskInfo.path}) only has ${formatBytes(queueDiskInfo.availableBytes)} available, but starting all staged items requires ${formatBytes(neededBytes)}.\n\n` +
+          `Destination drive (${queueDiskInfo.path}) only has ${formatBytes(queueDiskInfo.availableBytes)} available, but starting all queued items requires ${formatBytes(neededBytes)}.\n\n` +
           `Downloads may stall or fail if storage runs out.\n\n` +
           `Start anyway?`
         )
@@ -256,10 +255,10 @@
           type="button"
           on:click={startAllStaged}
           class="px-3 py-1.5 rounded-xl bg-dark-800 hover:bg-dark-700 text-slate-200 border border-dark-700 text-xs font-semibold flex items-center gap-1.5 transition-colors"
-          title="Start all staged items in queue"
+          title="Start all queued items in queue"
         >
           <Play class="w-3 h-3 fill-current text-accent-indigo" />
-          <span>Start All Staged ({stagedCount})</span>
+          <span>Start All Queued ({stagedCount})</span>
         </button>
       {/if}
 
@@ -296,7 +295,7 @@
         on:click={() => (activeTab = 'staged')}
         class="px-3 py-1 rounded-lg text-xs font-medium transition-colors {activeTab === 'staged' ? 'bg-dark-700 text-white font-semibold' : 'text-slate-400 hover:text-slate-200'}"
       >
-        Staged / Paused ({stagedCount})
+        Queued / Paused ({stagedCount})
       </button>
       <button
         type="button"
@@ -333,7 +332,7 @@
           on:click={startSelected}
           disabled={startableSelected.length === 0}
           class="px-3 py-1.5 rounded-xl bg-accent-indigo hover:bg-indigo-500 disabled:opacity-35 disabled:cursor-not-allowed text-white text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm"
-          title={startableSelected.length > 0 ? `Start ${startableSelected.length} selected download(s)` : 'Select staged or paused items to start'}
+          title={startableSelected.length > 0 ? `Start ${startableSelected.length} selected download(s)` : 'Select queued or paused items to start'}
         >
           <Play class="w-3 h-3 fill-current" />
           <span>Start Selected {startableSelected.length > 0 ? `(${startableSelected.length})` : ''}</span>
@@ -358,7 +357,7 @@
   {#if filteredItems.length === 0}
     <div class="py-12 text-center text-slate-500 text-sm flex flex-col items-center gap-2">
       <ListOrdered class="w-8 h-8 text-slate-600" />
-      <span>No download items in this view. Paste a Hugging Face URL above to stage models!</span>
+      <span>No download items in this view. Paste a Hugging Face URL above to queue models!</span>
     </div>
   {:else}
     <div class="flex flex-col gap-3">
@@ -399,7 +398,7 @@
                   </span>
                 {:else if item.status === 'staged'}
                   <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-700/50 text-slate-300 border border-slate-600">
-                    Staged
+                    Queued
                   </span>
                 {:else if item.status === 'paused'}
                   <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/40">

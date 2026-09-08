@@ -2,7 +2,7 @@
   import { onMount } from 'svelte'
   import { EventsOn } from '../wailsjs/runtime/runtime'
   import { ParseAndInspect, SelectDirectoryDialog } from '../wailsjs/go/main/App'
-  import type { InspectResponse, FileNode, ParsedTarget, DownloadItem } from './lib/types'
+  import type { InspectResponse, FileNode, DownloadItem } from './lib/types'
   import { queueStore, fetchQueue, addQueueItems, handleProgressUpdate } from './lib/stores/queue'
   import { bookmarksStore, fetchBookmarks } from './lib/stores/bookmarks'
   import { settingsStore, fetchSettings } from './lib/stores/settings'

@@ -123,10 +123,20 @@ func (te *TransferEngine) Download(
 	var lastSampleBytes = downloadedBytes
 
 	var stateMu sync.Mutex
+	var tickerWg sync.WaitGroup
 	stopTicker := make(chan struct{})
-	defer close(stopTicker)
+	var stopOnce sync.Once
+	stopTickerFunc := func() {
+		stopOnce.Do(func() {
+			close(stopTicker)
+			tickerWg.Wait()
+		})
+	}
+	defer stopTickerFunc()
 
+	tickerWg.Add(1)
 	go func() {
+		defer tickerWg.Done()
 		ticker := time.NewTicker(500 * time.Millisecond)
 		defer ticker.Stop()
 
@@ -187,6 +197,9 @@ func (te *TransferEngine) Download(
 	}()
 
 	// 4. Concurrently download chunks
+	chunkCtx, chunkCancel := context.WithCancel(ctx)
+	defer chunkCancel()
+
 	worker := NewChunkWorker(te.httpClient, job.Token)
 	errChan := make(chan error, len(state.Chunks))
 	var wg sync.WaitGroup
@@ -206,14 +219,14 @@ func (te *TransferEngine) Download(
 			select {
 			case sem <- struct{}{}:
 				defer func() { <-sem }()
-			case <-ctx.Done():
-				errChan <- ctx.Err()
+			case <-chunkCtx.Done():
+				errChan <- chunkCtx.Err()
 				return
 			}
 
 			// Stream from current offset
 			cErr := worker.DownloadRange(
-				ctx,
+				chunkCtx,
 				job.URL,
 				c.CurrentOffset,
 				c.End,
@@ -228,6 +241,7 @@ func (te *TransferEngine) Download(
 			)
 
 			if cErr != nil {
+				chunkCancel() // Fast cancel sibling chunks
 				errChan <- cErr
 				return
 			}
@@ -257,6 +271,9 @@ func (te *TransferEngine) Download(
 		return fmt.Errorf("failed to sync part file: %w", err)
 	}
 
+	// Stop speed sampling ticker before sending final completed status
+	stopTickerFunc()
+
 	// Final progress update
 	if progressCb != nil {
 		progressCb(DownloadProgress{
@@ -264,8 +281,8 @@ func (te *TransferEngine) Download(
 			Percentage:      100.0,
 			DownloadedBytes: job.TotalSize,
 			TotalBytes:      job.TotalSize,
-			SpeedBPS:        speedBPS,
-			SpeedFormatted:  FormatSpeed(speedBPS),
+			SpeedBPS:        0,
+			SpeedFormatted:  "",
 			ETASeconds:      0,
 			Status:          "completed",
 		})

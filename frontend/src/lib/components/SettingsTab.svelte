@@ -2,7 +2,7 @@
   import { settingsStore, persistSettings, openTokenPage } from '../stores/settings'
   import { browseDirectory } from '../stores/bookmarks'
   import type { Settings, RoutingRule } from '../types'
-  import { Settings as SettingsIcon, Save, KeyRound, ExternalLink, HardDrive, Plus, Trash2, Cpu, FolderOpen } from 'lucide-svelte'
+  import { Settings as SettingsIcon, Save, KeyRound, ExternalLink, Plus, Trash2, Cpu, FolderOpen } from 'lucide-svelte'
 
   let localSettings: Settings | null = null
   let saving: boolean = false

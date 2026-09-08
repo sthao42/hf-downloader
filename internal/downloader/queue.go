@@ -61,6 +61,7 @@ type QueueManager struct {
 	sem          chan struct{}
 	autoDownload bool
 	stopChan     chan struct{}
+	closeOnce    sync.Once
 }
 
 // NewQueueManager initializes the QueueManager.
@@ -138,12 +139,19 @@ func (qm *QueueManager) QueueItems(newItems []DownloadItem, autoStart bool) []Do
 		if item.Revision == "" {
 			item.Revision = "main"
 		}
-		if item.FinalFilename == "" {
-			item.FinalFilename = filepath.Base(item.RemotePath)
+		cleanFilename := filepath.Base(filepath.Clean(item.FinalFilename))
+		if cleanFilename == "." || cleanFilename == "/" || cleanFilename == "\\" || cleanFilename == "" {
+			cleanFilename = filepath.Base(filepath.Clean(item.RemotePath))
 		}
+		if cleanFilename == "." || cleanFilename == "/" || cleanFilename == "\\" || cleanFilename == "" {
+			cleanFilename = "model.safetensors"
+		}
+		item.FinalFilename = cleanFilename
+
 		if item.DestinationDir == "" {
 			item.DestinationDir = qm.configMgr.ResolveDestination(item.RemotePath)
 		}
+		item.DestinationDir = filepath.Clean(item.DestinationDir)
 		if item.CreatedAt == 0 {
 			item.CreatedAt = time.Now().Unix()
 		}
@@ -169,12 +177,13 @@ func (qm *QueueManager) UpdateItemDestination(id, newDestDir string) error {
 	qm.mu.Lock()
 	defer qm.mu.Unlock()
 
+	cleanDest := filepath.Clean(newDestDir)
 	for i := range qm.items {
 		if qm.items[i].ID == id {
 			if qm.items[i].Status == StatusDownloading {
 				return fmt.Errorf("cannot change destination directory while item is downloading")
 			}
-			qm.items[i].DestinationDir = newDestDir
+			qm.items[i].DestinationDir = cleanDest
 			go qm.broadcast(qm.items[i])
 			return nil
 		}
@@ -365,7 +374,12 @@ func (qm *QueueManager) executeDownload(item DownloadItem) {
 		qm.mu.Unlock()
 	}()
 
-	finalPath := filepath.Join(item.DestinationDir, item.FinalFilename)
+	cleanFilename := filepath.Base(filepath.Clean(item.FinalFilename))
+	if cleanFilename == "." || cleanFilename == "/" || cleanFilename == "\\" || cleanFilename == "" {
+		cleanFilename = "model.safetensors"
+	}
+	cleanDest := filepath.Clean(item.DestinationDir)
+	finalPath := filepath.Join(cleanDest, cleanFilename)
 
 	// Step 1: Pre-download hash verification of existing completed file
 	qm.updateItemStatus(item.ID, func(it *DownloadItem) {
@@ -450,8 +464,8 @@ func (qm *QueueManager) executeDownload(item DownloadItem) {
 	job := &DownloadJob{
 		TaskID:         item.ID,
 		URL:            downloadURL,
-		DestinationDir: item.DestinationDir,
-		FinalFilename:  item.FinalFilename,
+		DestinationDir: cleanDest,
+		FinalFilename:  cleanFilename,
 		TotalSize:      totalSize,
 		ExpectedSHA256: item.ExpectedSHA256,
 		Token:          token,
@@ -488,7 +502,7 @@ func (qm *QueueManager) executeDownload(item DownloadItem) {
 		it.Status = StatusVerifying
 	})
 
-	partPath := filepath.Join(item.DestinationDir, item.FinalFilename+".part")
+	partPath := filepath.Join(cleanDest, cleanFilename+".part")
 	finErr := FinalizeDownload(partPath, finalPath, item.ExpectedSHA256)
 	if finErr != nil {
 		qm.updateItemStatus(item.ID, func(it *DownloadItem) {
@@ -516,11 +530,13 @@ func (qm *QueueManager) executeDownload(item DownloadItem) {
 
 // Close stops the background worker loop and cancels in-flight jobs.
 func (qm *QueueManager) Close() {
-	close(qm.stopChan)
-	qm.mu.Lock()
-	for _, cancel := range qm.cancels {
-		cancel()
-	}
-	qm.cancels = make(map[string]context.CancelFunc)
-	qm.mu.Unlock()
+	qm.closeOnce.Do(func() {
+		close(qm.stopChan)
+		qm.mu.Lock()
+		for _, cancel := range qm.cancels {
+			cancel()
+		}
+		qm.cancels = make(map[string]context.CancelFunc)
+		qm.mu.Unlock()
+	})
 }

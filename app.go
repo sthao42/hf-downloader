@@ -266,15 +266,16 @@ func (a *App) OpenFolder(folderPath string) error {
 		return fmt.Errorf("folder path cannot be empty")
 	}
 
-	_ = os.MkdirAll(folderPath, 0755)
+	cleanPath := filepath.Clean(folderPath)
+	_ = os.MkdirAll(cleanPath, 0755)
 
 	switch runtime.GOOS {
 	case "windows":
-		return exec.Command("explorer", folderPath).Start()
+		return exec.Command("explorer", cleanPath).Start()
 	case "darwin":
-		return exec.Command("open", folderPath).Start()
+		return exec.Command("open", cleanPath).Start()
 	default:
-		return exec.Command("xdg-open", folderPath).Start()
+		return exec.Command("xdg-open", cleanPath).Start()
 	}
 }
 

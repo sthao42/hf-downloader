@@ -39,7 +39,7 @@ func (cw *ChunkWorker) DownloadRange(
 	writer *PartFileWriter,
 	onBytesRead func(n int),
 ) error {
-	if start > end {
+	if end >= 0 && start > end {
 		return nil // Already complete
 	}
 
@@ -48,8 +48,15 @@ func (cw *ChunkWorker) DownloadRange(
 		return fmt.Errorf("failed to create range request: %w", err)
 	}
 
-	rangeHeader := fmt.Sprintf("bytes=%d-%d", start, end)
-	req.Header.Set("Range", rangeHeader)
+	var rangeHeader string
+	if end >= 0 {
+		rangeHeader = fmt.Sprintf("bytes=%d-%d", start, end)
+		req.Header.Set("Range", rangeHeader)
+	} else if start > 0 {
+		rangeHeader = fmt.Sprintf("bytes=%d-", start)
+		req.Header.Set("Range", rangeHeader)
+	}
+
 	req.Header.Set("User-Agent", cw.userAgent)
 	if cw.token != "" {
 		req.Header.Set("Authorization", "Bearer "+cw.token)
@@ -61,8 +68,17 @@ func (cw *ChunkWorker) DownloadRange(
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusPartialContent && resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("unexpected status code %d for %s", resp.StatusCode, rangeHeader)
+	if resp.StatusCode != http.StatusPartialContent {
+		if resp.StatusCode == http.StatusOK && start == 0 {
+			// Single chunk from beginning or server ignored Range header
+		} else {
+			return fmt.Errorf("unexpected status code %d for %s (server may not support byte ranges)", resp.StatusCode, rangeHeader)
+		}
+	}
+
+	var bodyReader io.Reader = resp.Body
+	if resp.StatusCode == http.StatusOK && end >= start && end >= 0 {
+		bodyReader = io.LimitReader(resp.Body, end-start+1)
 	}
 
 	buf := make([]byte, 128*1024) // 128KB buffer
@@ -75,7 +91,7 @@ func (cw *ChunkWorker) DownloadRange(
 		default:
 		}
 
-		n, rErr := resp.Body.Read(buf)
+		n, rErr := bodyReader.Read(buf)
 		if n > 0 {
 			if _, wErr := writer.WriteAt(buf[:n], currOffset); wErr != nil {
 				return fmt.Errorf("failed to write at offset %d: %w", currOffset, wErr)

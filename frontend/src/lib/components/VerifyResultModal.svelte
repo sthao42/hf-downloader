@@ -1,6 +1,6 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte'
-  import { ShieldCheck, AlertTriangle, AlertCircle, X, Copy, Check, HardDrive, FileCheck, FolderOpen, Hash, Globe } from 'lucide-svelte'
+  import { ShieldCheck, AlertTriangle, AlertCircle, X, Copy, Check, HardDrive, FileCheck, FolderOpen, Globe } from 'lucide-svelte'
   import { formatBytes } from '../utils'
   import { openTaskFolder } from '../stores/queue'
   import type { DownloadItem, VerificationResult } from '../types'

@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"strings"
+	"time"
 )
 
 // VerificationResult provides details on existing local file inspection.
@@ -102,14 +103,21 @@ func FinalizeDownload(partPath, finalPath, expectedHash string) error {
 		}
 	}
 
-	// Remove target if exists (required on Windows before Rename)
-	_ = os.Remove(finalPath)
-
-	if err := os.Rename(partPath, finalPath); err != nil {
-		return fmt.Errorf("failed to rename part file to final file: %w", err)
+	// Remove target if exists (required on Windows before Rename), with retry for transient file locks
+	var renameErr error
+	for attempt := 0; attempt < 3; attempt++ {
+		_ = os.Remove(finalPath)
+		renameErr = os.Rename(partPath, finalPath)
+		if renameErr == nil {
+			break
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+	if renameErr != nil {
+		return fmt.Errorf("failed to rename part file to final file: %w", renameErr)
 	}
 
-	// Remove associated .part.json
-	_ = os.Remove(partPath + ".json")
+	// Remove associated .part.json using synchronized state manager
+	_ = RemoveState(partPath + ".json")
 	return nil
 }
