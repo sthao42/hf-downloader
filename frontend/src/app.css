@@ -18,14 +18,15 @@
 
   html.light {
     color-scheme: light;
-    --color-dark-950: #ffffff;
-    --color-dark-900: #f8fafc;
-    --color-dark-850: #ffffff;
-    --color-dark-800: #f1f5f9;
-    --color-dark-700: #e2e8f0;
-    --color-dark-600: #cbd5e1;
-    --app-bg: #f8fafc;
-    --app-text: #0f172a;
+    /* Distinct depth layers: canvas -> card -> sunken container */
+    --color-dark-950: #f1f5f9; /* Sunken wells, file lists & progress tracks */
+    --color-dark-900: #e2e8f0; /* App canvas background / inner card dividers */
+    --color-dark-850: #ffffff; /* Primary raised cards & containers */
+    --color-dark-800: #e2e8f0; /* Pill buttons & secondary controls */
+    --color-dark-700: #cbd5e1; /* High-contrast card & element borders */
+    --color-dark-600: #94a3b8; /* Hover & active boundary outlines */
+    --app-bg: #edf2f7;         /* Elegant cool-slate canvas background */
+    --app-text: #0f172a;        /* Deep slate-900 high contrast text */
   }
 
   body {
@@ -37,7 +38,7 @@
     user-select: none;
     -webkit-user-select: none;
     overflow-x: hidden;
-    transition: background-color 0.2s ease, color 0.2s ease;
+    transition: background-color 0.25s ease, color 0.25s ease;
   }
 
   /* Custom subtle scrollbar */
@@ -57,17 +58,25 @@
   }
 }
 
-/* Light Mode Overrides & Polish */
+/* =========================================================
+   Light Mode Rich Color Tones & Contrast Polish
+   ========================================================= */
+
 html.light body {
-  background-color: #f8fafc;
+  background-color: #edf2f7;
   color: #0f172a;
 }
 
+/* Typography contrast */
 html.light h1,
 html.light h2,
 html.light h3,
 html.light h4 {
   color: #0f172a !important;
+}
+
+html.light .text-white {
+  color: #0f172a;
 }
 
 html.light .text-slate-100 {
@@ -83,52 +92,231 @@ html.light .text-slate-300 {
 }
 
 html.light .text-slate-400 {
-  color: #64748b;
+  color: #475569;
 }
 
 html.light .text-slate-500 {
   color: #64748b;
 }
 
-html.light header {
-  background-color: rgba(255, 255, 255, 0.9) !important;
-  border-bottom-color: #e2e8f0 !important;
+html.light .text-slate-600 {
+  color: #94a3b8;
 }
 
+/* Header styling in light mode */
+html.light header {
+  background-color: rgba(255, 255, 255, 0.92) !important;
+  border-bottom: 1px solid #cbd5e1 !important;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
+}
+
+/* Navigation tabs bar */
+html.light nav {
+  background-color: #e2e8f0 !important;
+  border-color: #cbd5e1 !important;
+}
+
+html.light nav button:not(.bg-accent-indigo) {
+  color: #475569 !important;
+}
+
+html.light nav button:not(.bg-accent-indigo):hover {
+  color: #0f172a !important;
+  background-color: #cbd5e1 !important;
+}
+
+/* Form inputs */
 html.light input[type="text"],
 html.light input[type="password"] {
   background-color: #ffffff !important;
   color: #0f172a !important;
-  border-color: #cbd5e1 !important;
+  border: 1.5px solid #cbd5e1 !important;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.04);
+}
+
+html.light input[type="text"]:focus,
+html.light input[type="password"]:focus {
+  border-color: #6366f1 !important;
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2) !important;
 }
 
 html.light input::placeholder {
   color: #94a3b8 !important;
 }
 
-/* Ensure colored accent buttons keep white text in light mode */
+/* Ensure colored action buttons keep crisp white text */
 html.light .bg-accent-indigo,
 html.light .bg-gradient-to-r,
 html.light .bg-indigo-500,
-html.light .bg-purple-500 {
+html.light .bg-purple-500,
+html.light .bg-emerald-500,
+html.light .bg-rose-500 {
   color: #ffffff !important;
 }
 
 html.light .bg-accent-indigo *,
 html.light .bg-gradient-to-r *,
 html.light .bg-indigo-500 *,
-html.light .bg-purple-500 * {
+html.light .bg-purple-500 *,
+html.light .bg-emerald-500 *,
+html.light .bg-rose-500 * {
   color: #ffffff !important;
+}
+
+/* Queue Items Cards in Light Mode */
+html.light .bg-dark-900 {
+  background-color: #ffffff !important;
+  border-color: #cbd5e1 !important;
+  box-shadow: 0 2px 8px -1px rgba(0, 0, 0, 0.05);
+}
+
+/* Secondary Buttons & Pills */
+html.light .bg-dark-800 {
+  background-color: #f1f5f9 !important;
+  border-color: #cbd5e1 !important;
+  color: #334155 !important;
+}
+
+html.light .bg-dark-800:hover {
+  background-color: #e2e8f0 !important;
+  color: #0f172a !important;
+  border-color: #94a3b8 !important;
+}
+
+/* Recessed file tree & progress bar tracks */
+html.light .bg-dark-950,
+html.light .bg-dark-950\/40,
+html.light .bg-dark-950\/60,
+html.light .bg-dark-950\/70,
+html.light .bg-dark-950\/80 {
+  background-color: #f8fafc !important;
+  border-color: #cbd5e1 !important;
+}
+
+/* File Inspector row selections and hovers */
+html.light .divide-dark-800\/80 > * {
+  border-color: #e2e8f0 !important;
+}
+
+html.light .hover\:bg-dark-800\/40:hover {
+  background-color: #f1f5f9 !important;
+}
+
+html.light .bg-indigo-950\/10 {
+  background-color: #eef2ff !important;
+}
+
+/* Status Badges with rich contrast in light mode */
+html.light .bg-accent-indigo\/20 {
+  background-color: #eef2ff !important;
+  color: #4f46e5 !important;
+  border-color: #c7d2fe !important;
+}
+
+html.light .bg-emerald-500\/20,
+html.light .bg-emerald-500\/10,
+html.light .bg-emerald-500\/15 {
+  background-color: #ecfdf5 !important;
+  color: #059669 !important;
+  border-color: #a7f3d0 !important;
+}
+
+html.light .bg-amber-500\/20 {
+  background-color: #fffbeb !important;
+  color: #b45309 !important;
+  border-color: #fde68a !important;
+}
+
+html.light .bg-blue-500\/20 {
+  background-color: #eff6ff !important;
+  color: #1d4ed8 !important;
+  border-color: #bfdbfe !important;
+}
+
+html.light .bg-rose-500\/20 {
+  background-color: #fff1f2 !important;
+  color: #be123c !important;
+  border-color: #fecdd3 !important;
+}
+
+html.light .bg-slate-700\/50 {
+  background-color: #f1f5f9 !important;
+  color: #475569 !important;
+  border-color: #cbd5e1 !important;
+}
+
+/* Model Quantization Badges in Light Mode */
+html.light .bg-emerald-500\/20.text-emerald-400 {
+  background-color: #ecfdf5 !important;
+  color: #047857 !important;
+  border-color: #6ee7b7 !important;
+}
+
+html.light .bg-teal-500\/20.text-teal-400 {
+  background-color: #f0fdfa !important;
+  color: #0f766e !important;
+  border-color: #5eead4 !important;
+}
+
+html.light .bg-cyan-500\/20.text-cyan-400 {
+  background-color: #ecfeff !important;
+  color: #0e7490 !important;
+  border-color: #67e8f9 !important;
+}
+
+html.light .bg-amber-500\/20.text-amber-400 {
+  background-color: #fffbeb !important;
+  color: #b45309 !important;
+  border-color: #fcd34d !important;
+}
+
+html.light .bg-indigo-500\/20.text-indigo-400 {
+  background-color: #eef2ff !important;
+  color: #4338ca !important;
+  border-color: #a5b4fc !important;
+}
+
+html.light .bg-blue-500\/20.text-blue-400 {
+  background-color: #eff6ff !important;
+  color: #1d4ed8 !important;
+  border-color: #93c5fd !important;
+}
+
+html.light .bg-purple-500\/20.text-purple-400 {
+  background-color: #faf5ff !important;
+  color: #7e22ce !important;
+  border-color: #d8b4fe !important;
+}
+
+html.light .bg-rose-500\/20.text-rose-400 {
+  background-color: #fff1f2 !important;
+  color: #be123c !important;
+  border-color: #fda4af !important;
+}
+
+html.light .bg-sky-500\/20.text-sky-400 {
+  background-color: #f0f9ff !important;
+  color: #0369a1 !important;
+  border-color: #7dd3fc !important;
+}
+
+html.light .bg-pink-500\/20.text-pink-400 {
+  background-color: #fdf2f8 !important;
+  color: #be185d !important;
+  border-color: #f9a8d4 !important;
 }
 
 /* Modal backdrop in light mode */
 html.light .fixed.inset-0.bg-black\/70 {
-  background-color: rgba(15, 23, 42, 0.45) !important;
+  background-color: rgba(15, 23, 42, 0.5) !important;
+  backdrop-filter: blur(4px);
 }
 
 /* Elevation shadows in light mode */
-html.light .shadow-xl,
-html.light .shadow-2xl,
-html.light .shadow-md {
-  box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.08), 0 2px 6px -1px rgba(15, 23, 42, 0.04) !important;
+html.light .shadow-xl {
+  box-shadow: 0 10px 25px -3px rgba(15, 23, 42, 0.08), 0 4px 10px -2px rgba(15, 23, 42, 0.04) !important;
+}
+
+html.light .shadow-2xl {
+  box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.18) !important;
 }
