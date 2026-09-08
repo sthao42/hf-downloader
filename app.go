@@ -15,6 +15,7 @@ import (
 	"hf-downloader/internal/downloader"
 	"hf-downloader/internal/hfapi"
 	"hf-downloader/internal/platform"
+	"hf-downloader/internal/version"
 )
 
 // InspectResponse contains the parsed target details and discovered files.
@@ -292,4 +293,14 @@ func (a *App) UpdateBookmarks(bookmarks []config.FolderBookmark) error {
 // UpdateRecentPaths saves the reordered recent paths list.
 func (a *App) UpdateRecentPaths(paths []string) error {
 	return a.configMgr.UpdateRecentPaths(paths)
+}
+
+// GetAppVersion returns the current application version.
+func (a *App) GetAppVersion() string {
+	return version.Get()
+}
+
+// GetBuildInfo returns detailed build and version metadata.
+func (a *App) GetBuildInfo() map[string]string {
+	return version.BuildInfo()
 }

@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte'
   import { EventsOn } from '../wailsjs/runtime/runtime'
-  import { ParseAndInspect, SelectDirectoryDialog } from '../wailsjs/go/main/App'
+  import { ParseAndInspect, SelectDirectoryDialog, GetAppVersion } from '../wailsjs/go/main/App'
   import type { InspectResponse, FileNode, DownloadItem } from './lib/types'
   import { queueStore, fetchQueue, addQueueItems, handleProgressUpdate } from './lib/stores/queue'
   import { bookmarksStore, fetchBookmarks } from './lib/stores/bookmarks'
@@ -31,6 +31,7 @@
   import { theme, initTheme, toggleTheme } from './lib/stores/theme'
 
   let activeTab: 'inspector' | 'queue' | 'bookmarks' | 'settings' = 'inspector'
+  let appVersion: string = 'v1.0.0'
   let loadingInspection: boolean = false
   let inspectResult: InspectResponse | null = null
   let inspectError: string = ''
@@ -56,6 +57,9 @@
   onMount(() => {
     initTheme()
     // Initial data load
+    GetAppVersion().then(v => {
+      if (v) appVersion = `v${v.replace(/^v/, '')}`
+    }).catch(() => {})
     fetchSettings()
     fetchBookmarks()
     fetchQueue()
@@ -187,7 +191,7 @@
       <div>
         <h1 class="text-sm font-black tracking-tight text-white flex items-center gap-2">
           <span>HF Downloader</span>
-          <span class="text-[10px] px-1.5 py-0.5 rounded font-mono bg-dark-700/70 text-accent-indigo font-bold border border-dark-600">v1.0</span>
+          <span class="text-[10px] px-1.5 py-0.5 rounded font-mono bg-dark-700/70 text-accent-indigo font-bold border border-dark-600">{appVersion}</span>
         </h1>
         <p class="text-[11px] text-slate-500">Multi-Socket Range Downloader & Path Router</p>
       </div>

@@ -18,8 +18,16 @@ export function DeleteBookmark(arg1) {
   return window['go']['main']['App']['DeleteBookmark'](arg1);
 }
 
+export function GetAppVersion() {
+  return window['go']['main']['App']['GetAppVersion']();
+}
+
 export function GetBookmarks() {
   return window['go']['main']['App']['GetBookmarks']();
+}
+
+export function GetBuildInfo() {
+  return window['go']['main']['App']['GetBuildInfo']();
 }
 
 export function GetQueueItems() {

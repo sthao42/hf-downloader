@@ -13,7 +13,11 @@ export function CheckDiskSpace(arg1:string):Promise<platform.DiskSpaceInfo>;
 
 export function DeleteBookmark(arg1:string):Promise<void>;
 
+export function GetAppVersion():Promise<string>;
+
 export function GetBookmarks():Promise<Array<config.FolderBookmark>>;
+
+export function GetBuildInfo():Promise<{[key: string]: string}>;
 
 export function GetQueueItems():Promise<Array<downloader.DownloadItem>>;
 

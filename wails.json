@@ -2,11 +2,19 @@
   "$schema": "https://wails.io/schemas/config.v2.json",
   "name": "hf-downloader",
   "outputfilename": "hf-downloader",
+  "version": "1.0.0",
   "frontend:install": "npm install",
   "frontend:build": "npm run build",
   "frontend:dev:watcher": "npm run dev",
   "frontend:dev:serverUrl": "auto",
   "author": {
     "name": "Hugging Face Downloader"
+  },
+  "info": {
+    "companyName": "Hugging Face Downloader",
+    "productName": "Hugging Face Model Downloader",
+    "productVersion": "1.0.0",
+    "copyright": "Copyright © 2026",
+    "comments": "Multi-Socket Range Downloader & Path Router"
   }
 }
