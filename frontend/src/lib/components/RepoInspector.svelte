@@ -3,16 +3,12 @@
   import type { FileNode, ParsedTarget } from '../types'
   import { formatBytes, detectQuantBadge } from '../utils'
   import {
-    Folder,
     FileText,
-    CheckSquare,
-    Square,
     Download,
     FolderSync,
     SlidersHorizontal,
     Search,
     HardDrive,
-    Tag,
     ChevronRight
   } from 'lucide-svelte'
 
@@ -57,12 +53,20 @@
 
   $: totalSelectedBytes = selectedFiles.reduce((acc, curr) => acc + (curr.file.size || 0), 0)
 
+  $: isAllFilteredSelected = filteredFiles.length > 0 && filteredFiles.every(f => !!selectedMap[f.path])
+  $: isSomeFilteredSelected = filteredFiles.some(f => !!selectedMap[f.path]) && !isAllFilteredSelected
+
   function toggleAll(selectAll: boolean) {
     const next: Record<string, boolean> = { ...selectedMap }
     for (const f of filteredFiles) {
       next[f.path] = selectAll
     }
     selectedMap = next
+  }
+
+  function handleMasterCheckboxToggle() {
+    const targetState = !isAllFilteredSelected
+    toggleAll(targetState)
   }
 
   function handleStage(autoStart: boolean) {
@@ -186,24 +190,19 @@
           />
         </div>
 
-        <div class="flex items-center gap-1.5 text-xs">
-          <button
-            type="button"
-            on:click={() => toggleAll(true)}
-            class="p-1 hover:text-slate-200 text-slate-400 transition-colors"
-            title="Select all filtered"
-          >
-            <CheckSquare class="w-4 h-4" />
-          </button>
-          <button
-            type="button"
-            on:click={() => toggleAll(false)}
-            class="p-1 hover:text-slate-200 text-slate-400 transition-colors"
-            title="Deselect all filtered"
-          >
-            <Square class="w-4 h-4" />
-          </button>
-        </div>
+        <label
+          class="flex items-center gap-1.5 text-xs cursor-pointer text-slate-300 hover:text-white select-none px-2.5 py-1.5 rounded-lg bg-dark-900/80 border border-dark-700 hover:border-slate-500 transition-colors flex-shrink-0"
+          title="Click to select or deselect all filtered files"
+        >
+          <input
+            type="checkbox"
+            checked={isAllFilteredSelected}
+            indeterminate={isSomeFilteredSelected}
+            on:change={handleMasterCheckboxToggle}
+            class="rounded border-dark-700 text-accent-indigo focus:ring-0 bg-dark-950 w-4 h-4 cursor-pointer"
+          />
+          <span class="font-medium text-xs">Select All</span>
+        </label>
       </div>
     </div>
 
