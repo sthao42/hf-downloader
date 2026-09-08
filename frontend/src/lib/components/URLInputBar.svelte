@@ -29,18 +29,6 @@
       console.error('Failed to read clipboard', e)
     }
   }
-
-  function pickPreset(preset: string) {
-    inputValue = preset
-    handleSubmit()
-  }
-
-  const quickPresets = [
-    { label: 'FLUX.1-schnell', repo: 'black-forest-labs/FLUX.1-schnell' },
-    { label: 'FLUX.1-dev', repo: 'black-forest-labs/FLUX.1-dev' },
-    { label: 'SDXL Base', repo: 'stabilityai/stable-diffusion-xl-base-1.0' },
-    { label: 'Comfy-Org FLUX Split', repo: 'Comfy-Org/flux1-dev' },
-  ]
 </script>
 
 <div class="bg-dark-850 border border-dark-700/60 rounded-2xl p-4 shadow-xl backdrop-blur-md">
@@ -104,18 +92,4 @@
       {/if}
     </button>
   </form>
-
-  <!-- Quick Presets -->
-  <div class="mt-3 flex items-center gap-2 flex-wrap text-xs text-slate-400 px-1">
-    <span class="text-slate-500">Quick Picks:</span>
-    {#each quickPresets as preset}
-      <button
-        type="button"
-        on:click={() => pickPreset(preset.repo)}
-        class="px-2 py-0.5 rounded-md bg-dark-800/80 hover:bg-dark-700 text-slate-300 border border-dark-700/50 hover:border-slate-600 transition-colors"
-      >
-        {preset.label}
-      </button>
-    {/each}
-  </div>
 </div>
