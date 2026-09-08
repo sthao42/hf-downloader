@@ -64,7 +64,7 @@
         id="hf-url-input"
         type="text"
         bind:value={inputValue}
-        placeholder="e.g. black-forest-labs/FLUX.1-dev or https://huggingface.co/.../tree/main/vae"
+        placeholder="e.g. krea/Krea-2-Turbo or https://huggingface.co/.../tree/main/vae"
         class="w-full pl-10 pr-24 py-2.5 bg-dark-950/80 border border-dark-700 rounded-xl text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-accent-indigo focus:ring-1 focus:ring-accent-indigo transition-all font-mono"
         disabled={loading}
       />
