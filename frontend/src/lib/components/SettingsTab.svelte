@@ -98,18 +98,18 @@
         </p>
       </div>
 
-      <div class="relative flex items-center">
+      <div class="flex items-center gap-2.5">
         <input
           id="default-download-location-input"
           type="text"
           bind:value={localSettings.defaultDownloadDir}
           placeholder="C:\Users\*username*\Downloads"
-          class="w-full pl-3.5 pr-12 py-2.5 bg-dark-950 border border-dark-700 rounded-xl text-xs text-slate-100 font-mono placeholder:text-slate-500 focus:outline-none focus:border-accent-indigo focus:ring-1 focus:ring-accent-indigo transition-all shadow-inner"
+          class="flex-1 px-3.5 py-2.5 bg-dark-950 border border-dark-700 rounded-xl text-xs text-slate-100 font-mono placeholder:text-slate-500 focus:outline-none focus:border-accent-indigo focus:ring-1 focus:ring-accent-indigo transition-all shadow-inner"
         />
         <button
           type="button"
           on:click={handleBrowseDefaultDir}
-          class="absolute right-1.5 p-2 bg-dark-800 hover:bg-dark-700 active:bg-dark-750 text-accent-indigo hover:text-accent-cyan rounded-lg border border-dark-700/80 hover:border-slate-500 transition-all flex items-center justify-center group"
+          class="px-3.5 py-2.5 bg-dark-800 hover:bg-dark-700 active:bg-dark-750 text-accent-indigo hover:text-accent-cyan rounded-xl border border-dark-700/80 hover:border-slate-500 transition-all flex items-center justify-center flex-shrink-0 shadow-sm group"
           title="Open Windows Explorer to locate and select a new default download path"
           aria-label="Open Windows Explorer to select default download path"
         >
