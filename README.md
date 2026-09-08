@@ -9,3 +9,7 @@ A high-performance, single-binary cross-platform desktop application built with 
 - **Interactive Staging Queue**: Queue, re-route, and monitor file downloads.
 - **Hash Verification & Chunk Repair**: Verify SHA-256 digests and resume incomplete byte ranges.
 - **Gated Access Assistant**: Hugging Face token integration for restricted repositories.
+
+## License
+Distributed under the MIT License. See `LICENSE` for more information.
+
