@@ -14,6 +14,7 @@
   import DownloadQueue from './lib/components/DownloadQueue.svelte'
   import TokenHelperModal from './lib/components/TokenHelperModal.svelte'
   import SettingsTab from './lib/components/SettingsTab.svelte'
+  import appLogo from './assets/images/logo.png'
 
   import {
     DownloadCloud,
@@ -178,9 +179,11 @@
   <header class="h-16 border-b border-dark-700/80 bg-dark-850/80 backdrop-blur-md px-6 flex items-center justify-between sticky top-0 z-30">
     <div class="flex items-center gap-3">
       <!-- App Brand Logo -->
-      <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-accent-indigo to-accent-purple flex items-center justify-center shadow-lg shadow-indigo-500/20 text-white font-black text-lg tracking-tighter">
-        HF
-      </div>
+      <img
+        src={appLogo}
+        alt="HF Downloader Logo"
+        class="w-9 h-9 rounded-xl object-contain shadow-md shadow-indigo-500/20"
+      />
       <div>
         <h1 class="text-sm font-black tracking-tight text-white flex items-center gap-2">
           <span>HF Downloader</span>
