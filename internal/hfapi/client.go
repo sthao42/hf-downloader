@@ -1,6 +1,7 @@
 package hfapi
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -122,10 +123,14 @@ func (c *Client) FetchTree(target *ParsedTarget, recursive bool) ([]FileNode, er
 			if pageItems[i].LFS != nil {
 				if pageItems[i].LFS.OID != "" {
 					pageItems[i].SHA256 = pageItems[i].LFS.OID
+					pageItems[i].LFS.Sha256 = pageItems[i].LFS.OID
 				}
 				if pageItems[i].LFS.Size > 0 {
 					pageItems[i].Size = pageItems[i].LFS.Size
 				}
+			}
+			if pageItems[i].SHA256 == "" && len(pageItems[i].OID) == 64 {
+				pageItems[i].SHA256 = pageItems[i].OID
 			}
 			pageItems[i].DownloadURL = BuildDownloadURL(target.RepoID, target.Revision, pageItems[i].Path)
 			allFiles = append(allFiles, pageItems[i])
@@ -145,3 +150,53 @@ func (c *Client) FetchTree(target *ParsedTarget, recursive bool) ([]FileNode, er
 
 	return allFiles, nil
 }
+
+// FetchPathsInfo queries the Hugging Face paths-info API to retrieve exact file metadata including LFS OID (SHA-256).
+func (c *Client) FetchPathsInfo(repoID, revision string, paths []string) ([]FileNode, error) {
+	if revision == "" {
+		revision = "main"
+	}
+	url := fmt.Sprintf("https://huggingface.co/api/models/%s/paths-info/%s", repoID, revision)
+
+	payload := map[string][]string{"paths": paths}
+	data, err := json.Marshal(payload)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", url, bytes.NewReader(data))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	c.prepareRequest(req)
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("paths-info returned status %d: %s", resp.StatusCode, string(body))
+	}
+
+	var nodes []FileNode
+	if err := json.NewDecoder(resp.Body).Decode(&nodes); err != nil {
+		return nil, err
+	}
+
+	for i := range nodes {
+		if nodes[i].LFS != nil && nodes[i].LFS.OID != "" {
+			nodes[i].SHA256 = nodes[i].LFS.OID
+			nodes[i].LFS.Sha256 = nodes[i].LFS.OID
+			if nodes[i].LFS.Size > 0 {
+				nodes[i].Size = nodes[i].LFS.Size
+			}
+		}
+	}
+
+	return nodes, nil
+}
+

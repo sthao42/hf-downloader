@@ -1,6 +1,6 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte'
-  import { ShieldCheck, AlertTriangle, AlertCircle, X, Copy, Check, HardDrive, FileCheck, FolderOpen, Hash } from 'lucide-svelte'
+  import { ShieldCheck, AlertTriangle, AlertCircle, X, Copy, Check, HardDrive, FileCheck, FolderOpen, Hash, Globe } from 'lucide-svelte'
   import { formatBytes } from '../utils'
   import { openTaskFolder } from '../stores/queue'
   import type { DownloadItem, VerificationResult } from '../types'
@@ -14,22 +14,40 @@
     close: void
   }>()
 
-  let copied: boolean = false
-  let copyTimeout: any = null
+  let copiedExpected: boolean = false
+  let copiedActual: boolean = false
+  let copyExpectedTimeout: any = null
+  let copyActualTimeout: any = null
 
-  $: isSuccess = !error && result && result.exists && result.valid
-  $: isNotice = !error && result && (!result.exists || !result.valid)
+  $: expectedHash = (item?.expectedSha256 || result?.expectedSha256 || '').trim()
+  $: actualHash = (result?.actualSha256 || '').trim()
+
+  $: hasExpected = Boolean(expectedHash)
+  $: hasActual = Boolean(actualHash)
+  $: hashesMatch = Boolean(hasExpected && hasActual && expectedHash.toLowerCase() === actualHash.toLowerCase())
+  $: hashesDiffer = Boolean(hasExpected && hasActual && expectedHash.toLowerCase() !== actualHash.toLowerCase())
+
+  $: isSuccess = !error && result && result.exists && result.valid && !hashesDiffer
+  $: isNotice = !error && result && (!result.exists || !result.valid || hashesDiffer || (!hasExpected && hasActual))
   $: isError = Boolean(error)
 
-  async function handleCopyHash(hashText: string) {
+  async function handleCopyHash(hashText: string, target: 'expected' | 'actual') {
     if (!hashText) return
     try {
       await navigator.clipboard.writeText(hashText)
-      copied = true
-      if (copyTimeout) clearTimeout(copyTimeout)
-      copyTimeout = setTimeout(() => {
-        copied = false
-      }, 2000)
+      if (target === 'expected') {
+        copiedExpected = true
+        if (copyExpectedTimeout) clearTimeout(copyExpectedTimeout)
+        copyExpectedTimeout = setTimeout(() => {
+          copiedExpected = false
+        }, 2000)
+      } else {
+        copiedActual = true
+        if (copyActualTimeout) clearTimeout(copyActualTimeout)
+        copyActualTimeout = setTimeout(() => {
+          copiedActual = false
+        }, 2000)
+      }
     } catch (e) {
       console.error('Failed to copy hash:', e)
     }
@@ -104,7 +122,7 @@
       </div>
 
       <!-- Modal Content Body -->
-      <div class="p-6 flex flex-col gap-4">
+      <div class="p-6 flex flex-col gap-4 max-h-[80vh] overflow-y-auto">
         <!-- Target File Information Card -->
         {#if item}
           <div class="p-3 verify-info-box flex items-start gap-2.5">
@@ -120,14 +138,32 @@
           </div>
         {/if}
 
+        <!-- Status Banner -->
         {#if isSuccess && result}
-          <!-- Success Status Banner -->
           <div class="p-3.5 verify-status-banner is-success rounded-xl text-xs flex items-center gap-2.5">
             <ShieldCheck class="w-4 h-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
-            <span>The local file is complete, uncorrupted, and exactly matches the expected remote size and checksum digest.</span>
+            <span>The local file is complete, uncorrupted, and verified against remote repository metadata.</span>
           </div>
+        {:else if isNotice && result}
+          <div class="p-3.5 verify-status-banner is-notice rounded-xl text-xs flex items-start gap-2.5">
+            <AlertTriangle class="w-4 h-4 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+            <div class="flex-1">
+              <div class="font-bold text-amber-950 dark:text-amber-200 mb-1">Verification Notice:</div>
+              <div class="text-[11px] leading-relaxed text-amber-900 dark:text-amber-300/90">{result.message}</div>
+            </div>
+          </div>
+        {:else if isError}
+          <div class="p-3.5 verify-status-banner is-error rounded-xl text-xs flex items-start gap-2.5">
+            <AlertCircle class="w-4 h-4 text-rose-600 dark:text-rose-400 flex-shrink-0 mt-0.5" />
+            <div class="flex-1">
+              <div class="font-bold text-rose-950 dark:text-rose-200 mb-1">Failed to Verify File:</div>
+              <div class="text-[11px] font-mono leading-relaxed text-rose-900 dark:text-rose-300/90">{error}</div>
+            </div>
+          </div>
+        {/if}
 
-          <!-- File Size Card -->
+        <!-- File Size Card -->
+        {#if result && result.exists}
           <div class="p-3.5 verify-info-box flex items-center justify-between gap-3">
             <div class="flex items-center gap-2">
               <HardDrive class="w-4 h-4 text-cyan-700 dark:text-accent-cyan flex-shrink-0" />
@@ -142,70 +178,110 @@
               </span>
             </div>
           </div>
+        {/if}
 
-          <!-- SHA-256 Checksum Card with High-Contrast Console Box -->
-          {@const hashToDisplay = result.actualSha256 || item?.expectedSha256 || ''}
+        <!-- Checksum Cards (Shown whenever result exists) -->
+        {#if result}
+          <!-- 1. Expected Remote SHA-256 Card -->
           <div class="p-3.5 verify-info-box flex flex-col gap-2.5">
             <div class="flex items-center justify-between">
-              <span class="text-xs text-slate-800 dark:text-slate-200 font-bold flex items-center gap-1.5">
-                <Hash class="w-3.5 h-3.5 text-indigo-600 dark:text-accent-indigo flex-shrink-0" />
-                <span>SHA-256 Checksum:</span>
-              </span>
-              {#if hashToDisplay}
+              <div class="flex items-center gap-2 min-w-0">
+                <Globe class="w-3.5 h-3.5 text-indigo-600 dark:text-accent-indigo flex-shrink-0" />
+                <span class="text-xs text-slate-800 dark:text-slate-200 font-bold">Expected Remote SHA-256:</span>
+                <span class="text-[10px] px-1.5 py-0.5 rounded-full bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 font-medium">Remote Metadata</span>
+              </div>
+              {#if hasExpected}
                 <button
                   type="button"
-                  on:click={() => handleCopyHash(hashToDisplay)}
-                  class="verify-btn-secondary px-2.5 py-1 rounded-lg text-[11px] font-medium flex items-center gap-1.5 transition-colors"
-                  title="Copy SHA-256 hash"
+                  on:click={() => handleCopyHash(expectedHash, 'expected')}
+                  class="verify-btn-secondary px-2.5 py-1 rounded-lg text-[11px] font-medium flex items-center gap-1.5 transition-colors flex-shrink-0"
+                  title="Copy Expected Remote SHA-256"
                 >
-                  {#if copied}
+                  {#if copiedExpected}
                     <Check class="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                     <span class="text-emerald-700 dark:text-emerald-400 font-bold">Copied!</span>
                   {:else}
                     <Copy class="w-3.5 h-3.5" />
-                    <span>Copy Hash</span>
+                    <span>Copy</span>
                   {/if}
                 </button>
               {/if}
             </div>
 
-            <!-- Sleek High-Contrast Monospace Code Box -->
+            <!-- Monospace Code Box -->
             <div class="p-3 verify-checksum-box rounded-lg text-xs font-mono break-all select-all leading-relaxed tracking-wide">
-              {hashToDisplay || 'Matches expected remote digest'}
-            </div>
-
-            <div class="flex items-center gap-1.5 text-[11px] font-semibold text-emerald-700 dark:text-emerald-400 mt-0.5">
-              <Check class="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
-              <span>Integrity Verified &bull; Exact Bit-for-Bit Digest Match</span>
-            </div>
-          </div>
-
-        {:else if isNotice && result}
-          <!-- Notice / Incomplete / Mismatch Banner -->
-          <div class="p-3.5 verify-status-banner is-notice rounded-xl text-xs flex items-start gap-2.5">
-            <AlertTriangle class="w-4 h-4 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
-            <div class="flex-1">
-              <div class="font-bold text-amber-950 dark:text-amber-200 mb-1">Verification Notice:</div>
-              <div class="text-[11px] leading-relaxed text-amber-900 dark:text-amber-300/90">{result.message}</div>
+              {#if hasExpected}
+                {expectedHash}
+              {:else}
+                <span class="italic text-slate-400 dark:text-slate-500 font-sans">Not provided in repository metadata</span>
+              {/if}
             </div>
           </div>
 
-          {#if result.exists}
-            <div class="p-3.5 verify-info-box flex items-center justify-between text-xs">
-              <span class="text-slate-700 dark:text-slate-300 font-medium">Current Local Size:</span>
-              <span class="font-mono text-slate-900 dark:text-slate-100 font-bold">{formatBytes(result.actualSize)}</span>
+          <!-- 2. Scanned Local SHA-256 Card -->
+          <div class="p-3.5 verify-info-box flex flex-col gap-2.5">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2 min-w-0">
+                <HardDrive class="w-3.5 h-3.5 text-cyan-600 dark:text-accent-cyan flex-shrink-0" />
+                <span class="text-xs text-slate-800 dark:text-slate-200 font-bold">Scanned Local SHA-256:</span>
+                <span class="text-[10px] px-1.5 py-0.5 rounded-full bg-cyan-500/10 text-cyan-700 dark:text-cyan-300 font-medium">Computed on Disk</span>
+              </div>
+              {#if hasActual}
+                <button
+                  type="button"
+                  on:click={() => handleCopyHash(actualHash, 'actual')}
+                  class="verify-btn-secondary px-2.5 py-1 rounded-lg text-[11px] font-medium flex items-center gap-1.5 transition-colors flex-shrink-0"
+                  title="Copy Scanned Local SHA-256"
+                >
+                  {#if copiedActual}
+                    <Check class="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                    <span class="text-emerald-700 dark:text-emerald-400 font-bold">Copied!</span>
+                  {:else}
+                    <Copy class="w-3.5 h-3.5" />
+                    <span>Copy</span>
+                  {/if}
+                </button>
+              {/if}
+            </div>
+
+            <!-- Monospace Code Box -->
+            <div class="p-3 verify-checksum-box rounded-lg text-xs font-mono break-all select-all leading-relaxed tracking-wide">
+              {#if hasActual}
+                {actualHash}
+              {:else}
+                <span class="italic text-slate-400 dark:text-slate-500 font-sans">Local file hash not available</span>
+              {/if}
+            </div>
+          </div>
+
+          <!-- 3. Comparison Result Match Indicator -->
+          {#if hasExpected && hasActual}
+            {#if hashesMatch}
+              <div class="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-800 dark:text-emerald-300 text-xs flex items-center gap-2.5">
+                <Check class="w-4 h-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
+                <div>
+                  <span class="font-bold">Exact Bit-for-Bit Digest Match:</span>
+                  <span class="block text-[11px] opacity-90 mt-0.5">The scanned local SHA-256 matches the expected remote repository hash.</span>
+                </div>
+              </div>
+            {:else}
+              <div class="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-800 dark:text-rose-300 text-xs flex items-center gap-2.5">
+                <AlertTriangle class="w-4 h-4 text-rose-600 dark:text-rose-400 flex-shrink-0" />
+                <div>
+                  <span class="font-bold">Checksum Mismatch:</span>
+                  <span class="block text-[11px] opacity-90 mt-0.5">The scanned local file SHA-256 does not match the expected remote repository checksum.</span>
+                </div>
+              </div>
+            {/if}
+          {:else if hasActual && !hasExpected}
+            <div class="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-900 dark:text-amber-300 text-xs flex items-center gap-2.5">
+              <AlertCircle class="w-4 h-4 text-amber-600 dark:text-amber-400 flex-shrink-0" />
+              <div>
+                <span class="font-bold">Scanned Local SHA-256 Computed:</span>
+                <span class="block text-[11px] opacity-90 mt-0.5">No expected hash was provided in the repository metadata to verify against.</span>
+              </div>
             </div>
           {/if}
-
-        {:else if isError}
-          <!-- Error Banner -->
-          <div class="p-3.5 verify-status-banner is-error rounded-xl text-xs flex items-start gap-2.5">
-            <AlertCircle class="w-4 h-4 text-rose-600 dark:text-rose-400 flex-shrink-0 mt-0.5" />
-            <div class="flex-1">
-              <div class="font-bold text-rose-950 dark:text-rose-200 mb-1">Failed to Verify File:</div>
-              <div class="text-[11px] font-mono leading-relaxed text-rose-900 dark:text-rose-300/90">{error}</div>
-            </div>
-          </div>
         {/if}
       </div>
 

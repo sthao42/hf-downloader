@@ -178,6 +178,10 @@
     verifyingMap = { ...verifyingMap, [item.id]: true }
     try {
       const res = await verifyTaskFile(item)
+      if (res?.expectedSha256 && !item.expectedSha256) {
+        item.expectedSha256 = res.expectedSha256
+        queueStore.update(items => items.map(it => it.id === item.id ? { ...it, expectedSha256: res.expectedSha256! } : it))
+      }
       verifyItem = item
       verifyResult = res
       verifyError = null
@@ -515,16 +519,22 @@
                   : `${formatBytes(item.downloadedBytes || 0)} / ${formatBytes(item.size || 0)}`}
               </span>
 
-              {#if item.status === 'completed' && item.expectedSha256}
+              {#if item.status === 'completed'}
                 <div class="flex items-center gap-1.5 min-w-0 text-[11px]">
                   <span class="text-slate-600 dark:text-slate-600">•</span>
                   <span class="font-semibold text-slate-500 dark:text-slate-400 flex-shrink-0">SHA-256:</span>
-                  <span
-                    class="font-mono text-slate-600 dark:text-slate-300 select-all truncate max-w-[260px] sm:max-w-sm md:max-w-md lg:max-w-lg xl:max-w-2xl cursor-text"
-                    title="Expected remote SHA-256: {item.expectedSha256}"
-                  >
-                    {item.expectedSha256}
-                  </span>
+                  {#if item.expectedSha256}
+                    <span
+                      class="font-mono text-slate-700 dark:text-slate-300 select-all truncate max-w-[260px] sm:max-w-sm md:max-w-md lg:max-w-lg xl:max-w-2xl cursor-text"
+                      title="Expected remote SHA-256: {item.expectedSha256}"
+                    >
+                      {item.expectedSha256}
+                    </span>
+                  {:else}
+                    <span class="text-slate-400 dark:text-slate-500 italic">
+                      Not provided in repository metadata
+                    </span>
+                  {/if}
                 </div>
               {/if}
             </div>

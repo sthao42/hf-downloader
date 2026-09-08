@@ -201,6 +201,16 @@ func (qm *QueueManager) StartItem(id string) error {
 	return fmt.Errorf("item %s not found", id)
 }
 
+// UpdateItemExpectedSHA256 sets or backfills the expected SHA-256 hash for a specific item.
+func (qm *QueueManager) UpdateItemExpectedSHA256(id, hash string) {
+	if hash == "" {
+		return
+	}
+	qm.updateItemStatus(id, func(it *DownloadItem) {
+		it.ExpectedSHA256 = hash
+	})
+}
+
 // PauseItem pauses an in-progress or queued download.
 func (qm *QueueManager) PauseItem(id string) error {
 	qm.mu.Lock()
@@ -385,6 +395,22 @@ func (qm *QueueManager) executeDownload(item DownloadItem) {
 			totalSize = insp.ContentLength
 		}
 		acceptRanges = insp.AcceptRanges
+		if item.ExpectedSHA256 == "" && insp.SHA256 != "" {
+			item.ExpectedSHA256 = insp.SHA256
+			qm.updateItemStatus(item.ID, func(it *DownloadItem) {
+				it.ExpectedSHA256 = insp.SHA256
+			})
+		}
+	}
+
+	if item.ExpectedSHA256 == "" && item.RepoID != "" && item.RemotePath != "" {
+		hfClient := hfapi.NewClient(hfapi.WithToken(token))
+		if nodes, err := hfClient.FetchPathsInfo(item.RepoID, item.Revision, []string{item.RemotePath}); err == nil && len(nodes) > 0 && nodes[0].SHA256 != "" {
+			item.ExpectedSHA256 = nodes[0].SHA256
+			qm.updateItemStatus(item.ID, func(it *DownloadItem) {
+				it.ExpectedSHA256 = nodes[0].SHA256
+			})
+		}
 	}
 
 	// Step 2.5: Safety check storage drive space to ensure sufficient room and prevent stalls
@@ -482,6 +508,9 @@ func (qm *QueueManager) executeDownload(item DownloadItem) {
 		it.SpeedBPS = 0
 		it.SpeedFormatted = ""
 		it.ETASeconds = 0
+		if it.ExpectedSHA256 == "" && item.ExpectedSHA256 != "" {
+			it.ExpectedSHA256 = item.ExpectedSHA256
+		}
 	})
 }
 

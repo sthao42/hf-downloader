@@ -44,6 +44,7 @@ type InspectionResult struct {
 	AcceptRanges  bool   `json:"acceptRanges"`
 	StatusCode    int    `json:"statusCode"`
 	ETag          string `json:"etag,omitempty"`
+	SHA256        string `json:"sha256,omitempty"`
 	IsGated       bool   `json:"isGated"`
 	FinalURL      string `json:"finalUrl,omitempty"`
 }

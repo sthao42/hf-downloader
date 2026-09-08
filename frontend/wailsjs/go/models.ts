@@ -134,6 +134,7 @@ export namespace downloader {
 	    valid: boolean;
 	    actualSize: number;
 	    actualSha256?: string;
+	    expectedSha256?: string;
 	    message: string;
 	
 	    static createFrom(source: any = {}) {
@@ -146,6 +147,7 @@ export namespace downloader {
 	        this.valid = source["valid"];
 	        this.actualSize = source["actualSize"];
 	        this.actualSha256 = source["actualSha256"];
+	        this.expectedSha256 = source["expectedSha256"];
 	        this.message = source["message"];
 	    }
 	}

@@ -11,11 +11,12 @@ import (
 
 // VerificationResult provides details on existing local file inspection.
 type VerificationResult struct {
-	Exists      bool   `json:"exists"`
-	Valid       bool   `json:"valid"`
-	ActualSize  int64  `json:"actualSize"`
-	ActualSHA256 string `json:"actualSha256,omitempty"`
-	Message     string `json:"message"`
+	Exists         bool   `json:"exists"`
+	Valid          bool   `json:"valid"`
+	ActualSize     int64  `json:"actualSize"`
+	ActualSHA256   string `json:"actualSha256,omitempty"`
+	ExpectedSHA256 string `json:"expectedSha256,omitempty"`
+	Message        string `json:"message"`
 }
 
 // VerifyExistingFile inspects an existing file on disk against expected size and SHA-256.
@@ -24,9 +25,10 @@ func VerifyExistingFile(filePath, expectedHash string, expectedSize int64) (*Ver
 	if err != nil {
 		if os.IsNotExist(err) {
 			return &VerificationResult{
-				Exists:  false,
-				Valid:   false,
-				Message: "file does not exist",
+				Exists:         false,
+				Valid:          false,
+				ExpectedSHA256: expectedHash,
+				Message:        "file does not exist",
 			}, nil
 		}
 		return nil, fmt.Errorf("failed to stat file %s: %w", filePath, err)
@@ -34,20 +36,14 @@ func VerifyExistingFile(filePath, expectedHash string, expectedSize int64) (*Ver
 
 	actualSize := info.Size()
 	res := &VerificationResult{
-		Exists:     true,
-		ActualSize: actualSize,
+		Exists:         true,
+		ActualSize:     actualSize,
+		ExpectedSHA256: expectedHash,
 	}
 
 	if expectedSize > 0 && actualSize != expectedSize {
 		res.Valid = false
 		res.Message = fmt.Sprintf("size mismatch: found %d bytes, expected %d bytes", actualSize, expectedSize)
-		return res, nil
-	}
-
-	if expectedHash == "" {
-		// No hash provided to verify against, but size matches
-		res.Valid = true
-		res.Message = "file exists and size matches"
 		return res, nil
 	}
 
@@ -65,6 +61,13 @@ func VerifyExistingFile(filePath, expectedHash string, expectedSize int64) (*Ver
 
 	actualHash := hex.EncodeToString(hasher.Sum(nil))
 	res.ActualSHA256 = actualHash
+
+	if expectedHash == "" {
+		// File exists, size matches, and local SHA-256 has been scanned
+		res.Valid = true
+		res.Message = "file exists and size matches (expected remote hash not provided)"
+		return res, nil
+	}
 
 	if strings.EqualFold(actualHash, expectedHash) {
 		res.Valid = true

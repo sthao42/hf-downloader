@@ -130,7 +130,7 @@
         destinationDir: dest || defaultDestinations[file.path] || $settingsStore?.defaultDownloadDir || '',
         finalFilename: finalFilename,
         size: file.size || 0,
-        expectedSha256: file.sha256 || '',
+        expectedSha256: file.sha256 || file.lfs?.oid || file.lfs?.sha256 || '',
         status: 'staged',
         autoStart: autoStart,
         downloadedBytes: 0,

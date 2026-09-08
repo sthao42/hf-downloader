@@ -90,6 +90,19 @@ func (a *App) ParseAndInspect(inputURL string) (*InspectResponse, error) {
 
 		if inspErr == nil && insp != nil {
 			node.Size = insp.ContentLength
+			node.SHA256 = insp.SHA256
+		}
+
+		// Fallback: If SHA-256 is still empty, query paths-info API
+		if node.SHA256 == "" && target.RepoID != "" && target.Subpath != "" {
+			if nodes, err := a.hfClient.FetchPathsInfo(target.RepoID, target.Revision, []string{target.Subpath}); err == nil && len(nodes) > 0 {
+				if nodes[0].SHA256 != "" {
+					node.SHA256 = nodes[0].SHA256
+				}
+				if node.Size <= 0 && nodes[0].Size > 0 {
+					node.Size = nodes[0].Size
+				}
+			}
 		}
 
 		res.Files = append(res.Files, node)
@@ -209,8 +222,37 @@ func (a *App) UpdateItemDestination(id, newDestDir string) error {
 
 // VerifyLocalFile checks if a file already exists locally and matches SHA-256.
 func (a *App) VerifyLocalFile(item downloader.DownloadItem) (*downloader.VerificationResult, error) {
+	// If item.ExpectedSHA256 is missing, attempt to resolve it from remote API or HEAD headers
+	if item.ExpectedSHA256 == "" && item.RepoID != "" && item.RemotePath != "" {
+		token := a.configMgr.GetSettings().HFToken
+		// 1. Try paths-info API
+		if nodes, err := a.hfClient.FetchPathsInfo(item.RepoID, item.Revision, []string{item.RemotePath}); err == nil && len(nodes) > 0 {
+			if nodes[0].SHA256 != "" {
+				item.ExpectedSHA256 = nodes[0].SHA256
+			}
+		}
+		// 2. Try InspectFile HEAD request
+		if item.ExpectedSHA256 == "" {
+			downloadURL := hfapi.BuildDownloadURL(item.RepoID, item.Revision, item.RemotePath)
+			if insp, err := a.resolver.InspectFile(downloadURL, token); err == nil && insp != nil && insp.SHA256 != "" {
+				item.ExpectedSHA256 = insp.SHA256
+			}
+		}
+		// Backfill to QueueManager so queue displays expected hash
+		if item.ExpectedSHA256 != "" && item.ID != "" {
+			a.queueMgr.UpdateItemExpectedSHA256(item.ID, item.ExpectedSHA256)
+		}
+	}
+
 	filePath := filepath.Join(item.DestinationDir, item.FinalFilename)
-	return downloader.VerifyExistingFile(filePath, item.ExpectedSHA256, item.Size)
+	res, err := downloader.VerifyExistingFile(filePath, item.ExpectedSHA256, item.Size)
+	if err != nil {
+		return nil, err
+	}
+	if res.ExpectedSHA256 == "" && item.ExpectedSHA256 != "" {
+		res.ExpectedSHA256 = item.ExpectedSHA256
+	}
+	return res, nil
 }
 
 // OpenHFTokenPage opens the Hugging Face settings page in the default web browser.

@@ -57,4 +57,25 @@ func TestVerifyExistingFile_And_Finalize(t *testing.T) {
 	if !finalRes.Exists || !finalRes.Valid {
 		t.Errorf("Expected final file to exist and be valid: %+v", finalRes)
 	}
+	if finalRes.ActualSHA256 != correctHash {
+		t.Errorf("Expected ActualSHA256 %s, got %s", correctHash, finalRes.ActualSHA256)
+	}
+	if finalRes.ExpectedSHA256 != correctHash {
+		t.Errorf("Expected ExpectedSHA256 %s, got %s", correctHash, finalRes.ExpectedSHA256)
+	}
+
+	// 6. Test VerifyExistingFile without expected hash (should still calculate ActualSHA256)
+	noHashRes, err := VerifyExistingFile(finalPath, "", int64(len(data)))
+	if err != nil {
+		t.Fatalf("VerifyExistingFile without hash failed: %v", err)
+	}
+	if !noHashRes.Exists || !noHashRes.Valid {
+		t.Errorf("Expected file without expected hash to be valid: %+v", noHashRes)
+	}
+	if noHashRes.ActualSHA256 != correctHash {
+		t.Errorf("Expected ActualSHA256 to be computed as %s even without expected hash, got %s", correctHash, noHashRes.ActualSHA256)
+	}
+	if noHashRes.ExpectedSHA256 != "" {
+		t.Errorf("Expected empty ExpectedSHA256, got %s", noHashRes.ExpectedSHA256)
+	}
 }
