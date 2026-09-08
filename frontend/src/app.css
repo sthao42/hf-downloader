@@ -334,3 +334,285 @@ html.light .shadow-xl {
 html.light .shadow-2xl {
   box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.18) !important;
 }
+
+/* =========================================================
+   Verify Result Modal - Rich Light & Dark Themes
+   ========================================================= */
+
+/* Backdrop overlay */
+.verify-modal-backdrop {
+  background-color: rgba(7, 10, 19, 0.75);
+  backdrop-filter: blur(6px);
+}
+html.light .verify-modal-backdrop {
+  background-color: rgba(15, 23, 42, 0.55);
+  backdrop-filter: blur(6px);
+}
+
+/* Modal Window Container */
+.verify-modal-card {
+  background-color: #0b0f19;
+  border-radius: 1rem;
+}
+html.light .verify-modal-card {
+  background-color: #ffffff;
+  border-radius: 1rem;
+}
+
+/* Success Border & Shadow */
+.verify-modal-card.is-success {
+  border: 2px solid rgba(16, 185, 129, 0.5);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7), 0 0 25px rgba(16, 185, 129, 0.15);
+}
+html.light .verify-modal-card.is-success {
+  border: 2px solid #059669;
+  box-shadow: 0 20px 40px -8px rgba(5, 150, 105, 0.25), 0 0 0 1px rgba(5, 150, 105, 0.15), 0 10px 20px -3px rgba(15, 23, 42, 0.1);
+}
+
+/* Notice Border & Shadow */
+.verify-modal-card.is-notice {
+  border: 2px solid rgba(245, 158, 11, 0.5);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7), 0 0 25px rgba(245, 158, 11, 0.15);
+}
+html.light .verify-modal-card.is-notice {
+  border: 2px solid #d97706;
+  box-shadow: 0 20px 40px -8px rgba(217, 119, 6, 0.25), 0 0 0 1px rgba(217, 119, 6, 0.15), 0 10px 20px -3px rgba(15, 23, 42, 0.1);
+}
+
+/* Error Border & Shadow */
+.verify-modal-card.is-error {
+  border: 2px solid rgba(244, 63, 94, 0.5);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7), 0 0 25px rgba(244, 63, 94, 0.15);
+}
+html.light .verify-modal-card.is-error {
+  border: 2px solid #e11d48;
+  box-shadow: 0 20px 40px -8px rgba(225, 29, 72, 0.25), 0 0 0 1px rgba(225, 29, 72, 0.15), 0 10px 20px -3px rgba(15, 23, 42, 0.1);
+}
+
+/* Headers */
+.verify-modal-header {
+  border-bottom: 1px solid rgba(51, 65, 85, 0.6);
+  background-color: #111726;
+}
+.verify-modal-header.is-success {
+  background: linear-gradient(90deg, rgba(6, 78, 59, 0.45) 0%, #111726 100%);
+  border-bottom-color: rgba(16, 185, 129, 0.25);
+}
+.verify-modal-header.is-notice {
+  background: linear-gradient(90deg, rgba(120, 53, 15, 0.45) 0%, #111726 100%);
+  border-bottom-color: rgba(245, 158, 11, 0.25);
+}
+.verify-modal-header.is-error {
+  background: linear-gradient(90deg, rgba(136, 19, 55, 0.45) 0%, #111726 100%);
+  border-bottom-color: rgba(244, 63, 94, 0.25);
+}
+
+html.light .verify-modal-header.is-success {
+  background: linear-gradient(135deg, #ecfdf5 0%, #f0fdf4 60%, #ffffff 100%);
+  border-bottom: 1.5px solid #a7f3d0;
+}
+html.light .verify-modal-header.is-notice {
+  background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 60%, #ffffff 100%);
+  border-bottom: 1.5px solid #fde68a;
+}
+html.light .verify-modal-header.is-error {
+  background: linear-gradient(135deg, #fff1f2 0%, #ffe4e6 60%, #ffffff 100%);
+  border-bottom: 1.5px solid #fecdd3;
+}
+
+/* Icon Badges */
+.verify-icon-badge.is-success {
+  background-color: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  color: #34d399;
+}
+html.light .verify-icon-badge.is-success {
+  background-color: #d1fae5;
+  border: 1.5px solid #6ee7b7;
+  color: #047857;
+  box-shadow: 0 2px 4px rgba(4, 120, 87, 0.12);
+}
+
+.verify-icon-badge.is-notice {
+  background-color: rgba(245, 158, 11, 0.15);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  color: #fbbf24;
+}
+html.light .verify-icon-badge.is-notice {
+  background-color: #fef3c7;
+  border: 1.5px solid #fcd34d;
+  color: #b45309;
+  box-shadow: 0 2px 4px rgba(180, 83, 9, 0.12);
+}
+
+.verify-icon-badge.is-error {
+  background-color: rgba(244, 63, 94, 0.15);
+  border: 1px solid rgba(244, 63, 94, 0.35);
+  color: #fb7185;
+}
+html.light .verify-icon-badge.is-error {
+  background-color: #ffe4e6;
+  border: 1.5px solid #fda4af;
+  color: #be123c;
+  box-shadow: 0 2px 4px rgba(190, 18, 60, 0.12);
+}
+
+/* Titles and Subtitles */
+.verify-modal-title {
+  color: #ffffff;
+}
+html.light .verify-modal-title {
+  color: #0f172a;
+}
+.verify-modal-subtitle.is-success {
+  color: #34d399;
+}
+html.light .verify-modal-subtitle.is-success {
+  color: #047857;
+  font-weight: 600;
+}
+.verify-modal-subtitle.is-notice {
+  color: #fbbf24;
+}
+html.light .verify-modal-subtitle.is-notice {
+  color: #b45309;
+  font-weight: 600;
+}
+.verify-modal-subtitle.is-error {
+  color: #fb7185;
+}
+html.light .verify-modal-subtitle.is-error {
+  color: #be123c;
+  font-weight: 600;
+}
+
+/* Content Cards & Info Wells */
+.verify-info-box {
+  background-color: rgba(7, 10, 19, 0.65);
+  border: 1px solid rgba(34, 47, 76, 0.7);
+  border-radius: 0.75rem;
+}
+html.light .verify-info-box {
+  background-color: #f8fafc;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 0.75rem;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+}
+
+/* Status Banner */
+.verify-status-banner.is-success {
+  background-color: rgba(6, 78, 59, 0.25);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  border-left: 4px solid #10b981;
+  color: #6ee7b7;
+}
+html.light .verify-status-banner.is-success {
+  background-color: #ecfdf5;
+  border: 1.5px solid #6ee7b7;
+  border-left: 4px solid #059669;
+  color: #065f46;
+  font-weight: 600;
+}
+
+.verify-status-banner.is-notice {
+  background-color: rgba(120, 53, 15, 0.25);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  border-left: 4px solid #f59e0b;
+  color: #fde68a;
+}
+html.light .verify-status-banner.is-notice {
+  background-color: #fffbeb;
+  border: 1.5px solid #fcd34d;
+  border-left: 4px solid #d97706;
+  color: #78350f;
+  font-weight: 600;
+}
+
+.verify-status-banner.is-error {
+  background-color: rgba(136, 19, 55, 0.25);
+  border: 1px solid rgba(244, 63, 94, 0.35);
+  border-left: 4px solid #f43f5e;
+  color: #fda4af;
+}
+html.light .verify-status-banner.is-error {
+  background-color: #fff1f2;
+  border: 1.5px solid #fda4af;
+  border-left: 4px solid #e11d48;
+  color: #881337;
+  font-weight: 600;
+}
+
+/* SHA-256 Terminal / Code Box - Always ultra crisp in both light & dark */
+.verify-checksum-box {
+  background-color: #030712 !important;
+  border: 1.5px solid #1f2937 !important;
+  color: #34d399 !important;
+  box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.4);
+}
+html.light .verify-checksum-box {
+  background-color: #0f172a !important;
+  border: 1.5px solid #334155 !important;
+  color: #34d399 !important;
+  box-shadow: inset 0 2px 5px 0 rgba(0, 0, 0, 0.35);
+}
+
+/* Footer Bar */
+.verify-modal-footer {
+  background-color: rgba(17, 23, 38, 0.85);
+  border-top: 1px solid rgba(34, 47, 76, 0.6);
+}
+html.light .verify-modal-footer {
+  background-color: #f8fafc;
+  border-top: 1.5px solid #e2e8f0;
+}
+
+/* Secondary Button in Modal (Open Folder / Copy) */
+.verify-btn-secondary {
+  background-color: #161f33;
+  border: 1px solid #222f4c;
+  color: #cbd5e1;
+}
+.verify-btn-secondary:hover {
+  background-color: #1e293b;
+  color: #ffffff;
+  border-color: #334155;
+}
+html.light .verify-btn-secondary {
+  background-color: #ffffff;
+  border: 1.5px solid #cbd5e1;
+  color: #334155;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+html.light .verify-btn-secondary:hover {
+  background-color: #f1f5f9;
+  color: #0f172a;
+  border-color: #94a3b8;
+}
+
+/* Primary Done Button */
+.verify-btn-primary.is-success {
+  background-color: #059669;
+  color: #ffffff !important;
+  box-shadow: 0 4px 14px rgba(5, 150, 105, 0.3);
+}
+.verify-btn-primary.is-success:hover {
+  background-color: #047857;
+  box-shadow: 0 6px 18px rgba(5, 150, 105, 0.4);
+}
+html.dark .verify-btn-primary.is-success {
+  background-color: #059669;
+}
+html.dark .verify-btn-primary.is-success:hover {
+  background-color: #10b981;
+}
+
+.verify-btn-primary.is-action {
+  background-color: #4f46e5;
+  color: #ffffff !important;
+  box-shadow: 0 4px 14px rgba(79, 70, 229, 0.3);
+}
+.verify-btn-primary.is-action:hover {
+  background-color: #4338ca;
+  box-shadow: 0 6px 18px rgba(79, 70, 229, 0.4);
+}
+
