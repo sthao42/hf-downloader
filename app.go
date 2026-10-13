@@ -142,6 +142,7 @@ func (a *App) SaveSettings(settings config.Settings) error {
 	if err == nil {
 		a.hfClient.SetToken(settings.HFToken)
 		a.queueMgr.SetAutoDownload(settings.AutoDownload)
+		a.queueMgr.SetSpeedLimit(settings.SpeedLimitMBps)
 	}
 	return err
 }

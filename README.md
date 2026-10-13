@@ -18,7 +18,7 @@ The definitive fix is using the official Hugging Face CLI. It saturates your ban
 | *Inspect Hugging Face repos, filter files by precision, and route targets* | *Manage live transfers, track speed/ETA, and execute batch controls* |
 | 🔖 **Folder Bookmarks & Quick Picks** | ⚙️ **Application Settings** |
 | <a href="example/example_4.png"><img src="example/example_4.png" alt="Folder Bookmarks" width="460" /></a> | <a href="example/example_2.png"><img src="example/example_2.png" alt="Application Settings" width="460" /></a> |
-| *One-click destination cards for ComfyUI, checkpoints, and LoRAs* | *Configure default folders, HF access tokens, and socket concurrency* |
+| *One-click destination cards for checkpoints, LoRAs, and LLMs* | *Configure default folders, HF access tokens, and socket concurrency* |
 
 ---
 

@@ -42,6 +42,7 @@ export namespace config {
 	    autoDownload: boolean;
 	    maxConcurrentFiles: number;
 	    maxConnectionsPerFile: number;
+	    speedLimitMBps: number;
 	    bookmarks: FolderBookmark[];
 	    routingRules: RoutingRule[];
 	    recentPaths: string[];
@@ -57,6 +58,7 @@ export namespace config {
 	        this.autoDownload = source["autoDownload"];
 	        this.maxConcurrentFiles = source["maxConcurrentFiles"];
 	        this.maxConnectionsPerFile = source["maxConnectionsPerFile"];
+	        this.speedLimitMBps = source["speedLimitMBps"];
 	        this.bookmarks = this.convertValues(source["bookmarks"], FolderBookmark);
 	        this.routingRules = this.convertValues(source["routingRules"], RoutingRule);
 	        this.recentPaths = source["recentPaths"];

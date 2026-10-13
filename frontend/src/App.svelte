@@ -31,7 +31,7 @@
   import { theme, initTheme, toggleTheme } from './lib/stores/theme'
 
   let activeTab: 'inspector' | 'queue' | 'bookmarks' | 'settings' = 'inspector'
-  let appVersion: string = 'v1.0.0'
+  let appVersion: string = 'v1.1.0'
   let loadingInspection: boolean = false
   let inspectResult: InspectResponse | null = null
   let inspectError: string = ''

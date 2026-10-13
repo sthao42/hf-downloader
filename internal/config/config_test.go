@@ -35,6 +35,10 @@ func TestConfigManager(t *testing.T) {
 		t.Errorf("DefaultDownloadDir mismatch: got %s, want %s", cmLoaded.settings.DefaultDownloadDir, cm.settings.DefaultDownloadDir)
 	}
 
+	if cmLoaded.settings.SpeedLimitMBps != 0 {
+		t.Errorf("SpeedLimitMBps mismatch: got %f, want 0", cmLoaded.settings.SpeedLimitMBps)
+	}
+
 	// 2. Test Add and Delete Bookmark
 	bm, err := cm.AddBookmark("Test Checkpoints", "D:\\test\\checkpoints")
 	if err != nil {

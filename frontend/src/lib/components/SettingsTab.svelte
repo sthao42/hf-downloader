@@ -2,7 +2,7 @@
   import { settingsStore, persistSettings, openTokenPage } from '../stores/settings'
   import { browseDirectory } from '../stores/bookmarks'
   import type { Settings, RoutingRule } from '../types'
-  import { Settings as SettingsIcon, Save, KeyRound, ExternalLink, Plus, Trash2, Cpu, FolderOpen } from 'lucide-svelte'
+  import { Settings as SettingsIcon, Save, KeyRound, ExternalLink, Plus, Trash2, Cpu, FolderOpen, Gauge } from 'lucide-svelte'
 
   let localSettings: Settings | null = null
   let saving: boolean = false
@@ -186,6 +186,84 @@
             bind:value={localSettings.maxConnectionsPerFile}
             class="w-full accent-indigo-500"
           />
+        </div>
+      </div>
+    </div>
+
+    <!-- Bandwidth & Download Speed Limit -->
+    <div class="bg-dark-900 border border-dark-700/70 rounded-xl p-5 flex flex-col gap-4 shadow-sm">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <Gauge class="w-4 h-4 text-accent-cyan" />
+          <span class="text-sm font-bold text-slate-100 dark:text-white">Download Speed Limit</span>
+        </div>
+        <div class="px-2.5 py-1 rounded-lg bg-dark-950 border border-dark-700 text-xs font-mono font-medium text-accent-cyan">
+          {(!localSettings.speedLimitMBps || localSettings.speedLimitMBps <= 0) ? 'Unlimited (Max Speed)' : `${localSettings.speedLimitMBps} MB/s`}
+        </div>
+      </div>
+
+      <p class="text-xs text-slate-400 dark:text-slate-400">
+        Throttle maximum download bandwidth to prevent network bufferbloat, router packet loss, and CDN disconnection issues when downloading at max capacity. Set to 0 for unlimited.
+      </p>
+
+      <!-- Quick Preset Buttons -->
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="text-[11px] text-slate-500 font-medium mr-1">Presets:</span>
+        {#each [
+          { label: 'Unlimited', value: 0 },
+          { label: '5 MB/s', value: 5 },
+          { label: '10 MB/s', value: 10 },
+          { label: '25 MB/s', value: 25 },
+          { label: '50 MB/s', value: 50 },
+          { label: '100 MB/s', value: 100 }
+        ] as preset}
+          <button
+            type="button"
+            on:click={() => { if (localSettings) localSettings.speedLimitMBps = preset.value }}
+            class="px-2.5 py-1 text-xs rounded-lg border transition-all font-medium {
+              (localSettings.speedLimitMBps || 0) === preset.value
+                ? 'bg-accent-indigo text-white border-indigo-500 shadow-sm shadow-indigo-500/30'
+                : 'bg-dark-950 text-slate-400 border-dark-700/80 hover:text-slate-200 hover:border-slate-500'
+            }"
+          >
+            {preset.label}
+          </button>
+        {/each}
+      </div>
+
+      <!-- Custom Input & Slider -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 items-center pt-1">
+        <div class="sm:col-span-2">
+          <label for="speed-limit-slider" class="text-[11px] text-slate-400 block mb-1">
+            Dynamic Speed Slider (0 = Unlimited)
+          </label>
+          <input
+            id="speed-limit-slider"
+            type="range"
+            min="0"
+            max="100"
+            step="1"
+            bind:value={localSettings.speedLimitMBps}
+            class="w-full accent-cyan-500"
+          />
+        </div>
+        <div>
+          <label for="speed-limit-input" class="text-[11px] text-slate-400 block mb-1">
+            Custom Limit (MB/s)
+          </label>
+          <div class="relative">
+            <input
+              id="speed-limit-input"
+              type="number"
+              min="0"
+              max="1000"
+              step="1"
+              bind:value={localSettings.speedLimitMBps}
+              placeholder="0 (Unlimited)"
+              class="w-full px-3 py-1.5 bg-dark-950 border border-dark-700 rounded-xl text-xs text-slate-100 font-mono focus:outline-none focus:border-accent-cyan focus:ring-1 focus:ring-accent-cyan transition-all shadow-inner"
+            />
+            <span class="absolute right-3 top-1.5 text-xs text-slate-500 font-mono pointer-events-none">MB/s</span>
+          </div>
         </div>
       </div>
     </div>

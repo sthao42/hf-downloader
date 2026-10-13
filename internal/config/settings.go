@@ -35,6 +35,7 @@ type Settings struct {
 	AutoDownload          bool             `json:"autoDownload"`
 	MaxConcurrentFiles    int              `json:"maxConcurrentFiles"`
 	MaxConnectionsPerFile int              `json:"maxConnectionsPerFile"`
+	SpeedLimitMBps        float64          `json:"speedLimitMBps"`
 	Bookmarks             []FolderBookmark `json:"bookmarks"`
 	RoutingRules          []RoutingRule    `json:"routingRules"`
 	RecentPaths           []string         `json:"recentPaths"`
@@ -63,6 +64,7 @@ func DefaultSettings() Settings {
 		AutoDownload:          false,
 		MaxConcurrentFiles:    2,
 		MaxConnectionsPerFile: 8,
+		SpeedLimitMBps:        0,
 		Bookmarks: []FolderBookmark{
 			{
 				ID:        "bm-checkpoints",

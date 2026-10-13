@@ -55,6 +55,7 @@ type QueueManager struct {
 	items        []DownloadItem
 	cancels      map[string]context.CancelFunc
 	engine       *TransferEngine
+	limiter      *SpeedLimiter
 	resolver     *hfapi.Resolver
 	configMgr    *config.ConfigManager
 	progressSubs []func(item DownloadItem)
@@ -75,12 +76,17 @@ func NewQueueManager(cm *config.ConfigManager) *QueueManager {
 		maxConcurrent = 2
 	}
 
-	httpClient := &http.Client{Timeout: 60 * time.Second}
+	apiClient := &http.Client{Timeout: 60 * time.Second}
+	downloadClient := NewDownloadHTTPClient()
+	limiter := NewSpeedLimiter(settings.SpeedLimitMBps)
+	engine := NewTransferEngine(downloadClient, limiter)
+
 	qm := &QueueManager{
 		items:        make([]DownloadItem, 0),
 		cancels:      make(map[string]context.CancelFunc),
-		engine:       NewTransferEngine(httpClient),
-		resolver:     hfapi.NewResolver(httpClient),
+		engine:       engine,
+		limiter:      limiter,
+		resolver:     hfapi.NewResolver(apiClient),
 		configMgr:    cm,
 		progressSubs: make([]func(item DownloadItem), 0),
 		sem:          make(chan struct{}, maxConcurrent),
@@ -124,6 +130,28 @@ func (qm *QueueManager) IsAutoDownload() bool {
 	qm.mu.RLock()
 	defer qm.mu.RUnlock()
 	return qm.autoDownload
+}
+
+// SetSpeedLimit dynamically updates the global download rate limit in MB/s.
+func (qm *QueueManager) SetSpeedLimit(limitMBps float64) {
+	qm.mu.Lock()
+	if qm.limiter != nil {
+		qm.limiter.SetLimit(limitMBps)
+	}
+	s := qm.configMgr.GetSettings()
+	s.SpeedLimitMBps = limitMBps
+	_ = qm.configMgr.UpdateSettings(s)
+	qm.mu.Unlock()
+}
+
+// GetSpeedLimit returns current speed limit in MB/s (0 = unlimited).
+func (qm *QueueManager) GetSpeedLimit() float64 {
+	qm.mu.RLock()
+	defer qm.mu.RUnlock()
+	if qm.limiter != nil {
+		return qm.limiter.LimitMBps()
+	}
+	return qm.configMgr.GetSettings().SpeedLimitMBps
 }
 
 // QueueItems adds one or more items to the staging queue.

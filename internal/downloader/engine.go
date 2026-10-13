@@ -64,16 +64,24 @@ func FormatBytes(bytes int64) string {
 // TransferEngine coordinates concurrent multi-socket chunk downloads.
 type TransferEngine struct {
 	httpClient *http.Client
+	limiter    *SpeedLimiter
 }
 
 // NewTransferEngine initializes a TransferEngine.
-func NewTransferEngine(client *http.Client) *TransferEngine {
+func NewTransferEngine(client *http.Client, limiter ...*SpeedLimiter) *TransferEngine {
 	if client == nil {
-		client = &http.Client{
-			Timeout: 60 * time.Second,
-		}
+		client = NewDownloadHTTPClient()
 	}
-	return &TransferEngine{httpClient: client}
+	var lim *SpeedLimiter
+	if len(limiter) > 0 {
+		lim = limiter[0]
+	}
+	return &TransferEngine{httpClient: client, limiter: lim}
+}
+
+// SetLimiter updates the speed limiter for the engine.
+func (te *TransferEngine) SetLimiter(limiter *SpeedLimiter) {
+	te.limiter = limiter
 }
 
 // Download executes a multi-connection chunked download or resumed transfer.
@@ -200,7 +208,7 @@ func (te *TransferEngine) Download(
 	chunkCtx, chunkCancel := context.WithCancel(ctx)
 	defer chunkCancel()
 
-	worker := NewChunkWorker(te.httpClient, job.Token)
+	worker := NewChunkWorker(te.httpClient, job.Token, te.limiter)
 	errChan := make(chan error, len(state.Chunks))
 	var wg sync.WaitGroup
 
@@ -211,6 +219,11 @@ func (te *TransferEngine) Download(
 		chunk := &state.Chunks[i]
 		if chunk.Done {
 			continue
+		}
+
+		// Small stagger to pace socket creation across parallel connections
+		if i > 0 {
+			time.Sleep(20 * time.Millisecond)
 		}
 
 		wg.Add(1)
@@ -224,24 +237,59 @@ func (te *TransferEngine) Download(
 				return
 			}
 
-			// Stream from current offset
-			cErr := worker.DownloadRange(
-				chunkCtx,
-				job.URL,
-				c.CurrentOffset,
-				c.End,
-				writer,
-				func(n int) {
-					atomic.AddInt64(&liveDownloaded, int64(n))
-					stateMu.Lock()
-					c.CurrentOffset += int64(n)
-					c.Downloaded += int64(n)
-					stateMu.Unlock()
-				},
-			)
+			// In-flight automatic retry loop for transient socket drops, CDN rate spikes, and stalls
+			const maxRetries = 5
+			var cErr error
+
+			for attempt := 0; attempt <= maxRetries; attempt++ {
+				if chunkCtx.Err() != nil {
+					errChan <- chunkCtx.Err()
+					return
+				}
+
+				if attempt > 0 {
+					// Exponential backoff: 500ms, 1s, 2s, 4s, 8s...
+					backoff := time.Duration(1<<uint(attempt-1)) * 500 * time.Millisecond
+					if backoff > 8*time.Second {
+						backoff = 8 * time.Second
+					}
+					select {
+					case <-chunkCtx.Done():
+						errChan <- chunkCtx.Err()
+						return
+					case <-time.After(backoff):
+					}
+				}
+
+				// Stream from current offset
+				cErr = worker.DownloadRange(
+					chunkCtx,
+					job.URL,
+					c.CurrentOffset,
+					c.End,
+					writer,
+					func(n int) {
+						atomic.AddInt64(&liveDownloaded, int64(n))
+						stateMu.Lock()
+						c.CurrentOffset += int64(n)
+						c.Downloaded += int64(n)
+						stateMu.Unlock()
+					},
+				)
+
+				if cErr == nil {
+					break
+				}
+
+				// If external cancellation or pause was requested, stop retrying immediately
+				if chunkCtx.Err() != nil || ctx.Err() != nil {
+					errChan <- cErr
+					return
+				}
+			}
 
 			if cErr != nil {
-				chunkCancel() // Fast cancel sibling chunks
+				chunkCancel() // All retries exhausted, fast cancel sibling chunks
 				errChan <- cErr
 				return
 			}

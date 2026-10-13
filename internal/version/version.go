@@ -3,7 +3,7 @@ package version
 // Build-time variables injected via -ldflags during compilation
 var (
 	// Version is the current semantic version of the application.
-	Version = "1.0.0"
+	Version = "1.1.0"
 
 	// GitCommit is the git commit SHA at build time.
 	GitCommit = "dev"

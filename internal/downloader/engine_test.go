@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"testing"
 )
 
@@ -156,5 +157,91 @@ func TestStatePersistence(t *testing.T) {
 
 	if _, err := os.Stat(statePath); !os.IsNotExist(err) {
 		t.Fatalf("Expected state file to be removed")
+	}
+}
+
+func TestTransferEngine_ChunkRetry(t *testing.T) {
+	const payloadSize = 4 * 1024 * 1024
+	payload := make([]byte, payloadSize)
+	for i := range payload {
+		payload[i] = byte(i % 199)
+	}
+
+	hasher := sha256.New()
+	hasher.Write(payload)
+	expectedHash := hex.EncodeToString(hasher.Sum(nil))
+
+	var failedAttempt atomic.Int32
+
+	// Flaky HTTP server: fails the first range request, succeeds on retry
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		rangeHeader := r.Header.Get("Range")
+		if rangeHeader != "" && failedAttempt.CompareAndSwap(0, 1) {
+			// Simulate transient disconnect / drop by closing hijacked connection or returning 500
+			http.Error(w, "transient CDN disconnect", http.StatusServiceUnavailable)
+			return
+		}
+
+		w.Header().Set("Accept-Ranges", "bytes")
+		if rangeHeader == "" {
+			w.Header().Set("Content-Length", strconv.Itoa(payloadSize))
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write(payload)
+			return
+		}
+
+		parts := strings.Split(strings.TrimPrefix(rangeHeader, "bytes="), "-")
+		start, _ := strconv.ParseInt(parts[0], 10, 64)
+		end := int64(payloadSize - 1)
+		if len(parts) > 1 && parts[1] != "" {
+			end, _ = strconv.ParseInt(parts[1], 10, 64)
+		}
+		if end >= int64(payloadSize) {
+			end = int64(payloadSize - 1)
+		}
+
+		contentLength := end - start + 1
+		w.Header().Set("Content-Range", fmt.Sprintf("bytes %d-%d/%d", start, end, payloadSize))
+		w.Header().Set("Content-Length", strconv.FormatInt(contentLength, 10))
+		w.WriteHeader(http.StatusPartialContent)
+		_, _ = w.Write(payload[start : end+1])
+	}))
+	defer server.Close()
+
+	tempDir, err := os.MkdirTemp("", "hf_retry_test_*")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	engine := NewTransferEngine(server.Client())
+	job := &DownloadJob{
+		TaskID:         "test-job-retry",
+		URL:            server.URL,
+		DestinationDir: tempDir,
+		FinalFilename:  "retry_model.safetensors",
+		TotalSize:      int64(payloadSize),
+		ExpectedSHA256: expectedHash,
+		MaxConnections: 2,
+		AcceptRanges:   true,
+	}
+
+	err = engine.Download(context.Background(), job, nil)
+	if err != nil {
+		t.Fatalf("Engine download with retries should have succeeded, got error: %v", err)
+	}
+
+	if failedAttempt.Load() != 1 {
+		t.Fatalf("Expected at least 1 simulated failure to test retry mechanism")
+	}
+
+	partPath := filepath.Join(tempDir, "retry_model.safetensors.part")
+	downloadedData, err := os.ReadFile(partPath)
+	if err != nil {
+		t.Fatalf("Failed to read part file: %v", err)
+	}
+
+	if !bytes.Equal(downloadedData, payload) {
+		t.Fatalf("Payload mismatch after retried download")
 	}
 }

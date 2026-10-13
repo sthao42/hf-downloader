@@ -17,7 +17,7 @@ export function GetAppVersion():Promise<string>;
 
 export function GetBookmarks():Promise<Array<config.FolderBookmark>>;
 
-export function GetBuildInfo():Promise<{[key: string]: string}>;
+export function GetBuildInfo():Promise<Record<string, string>>;
 
 export function GetQueueItems():Promise<Array<downloader.DownloadItem>>;
 
