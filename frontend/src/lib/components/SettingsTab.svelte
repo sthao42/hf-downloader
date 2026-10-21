@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onDestroy } from 'svelte'
   import { settingsStore, persistSettings, openTokenPage } from '../stores/settings'
   import { browseDirectory } from '../stores/bookmarks'
   import type { Settings, RoutingRule } from '../types'
@@ -13,8 +14,91 @@
   let newTargetDir: string = ''
   let newRuleLabel: string = ''
 
+  let speedDebounceTimer: ReturnType<typeof setTimeout> | null = null
+
   $: if ($settingsStore && !localSettings) {
     localSettings = JSON.parse(JSON.stringify($settingsStore))
+  }
+
+  // Synchronize store updates into local state if user is not actively editing
+  $: if (localSettings && $settingsStore && !speedDebounceTimer && Number(localSettings.speedLimitMBps || 0) !== Number($settingsStore.speedLimitMBps || 0)) {
+    localSettings.speedLimitMBps = Number($settingsStore.speedLimitMBps || 0)
+  }
+
+  onDestroy(() => {
+    if (speedDebounceTimer) {
+      clearTimeout(speedDebounceTimer)
+      speedDebounceTimer = null
+    }
+    if (localSettings) {
+      const cleanLimit = Math.max(0, Number(localSettings.speedLimitMBps) || 0)
+      localSettings.speedLimitMBps = cleanLimit
+      // Persist if any unsaved changes or speed limit changed when switching tabs
+      if ($settingsStore && JSON.stringify(localSettings) !== JSON.stringify($settingsStore)) {
+        persistSettings(localSettings).catch(err => {
+          console.error('Failed to auto-save settings on tab unmount:', err)
+        })
+      }
+    }
+  })
+
+  function selectSpeedPreset(presetValue: number) {
+    if (!localSettings) return
+    if (speedDebounceTimer) {
+      clearTimeout(speedDebounceTimer)
+      speedDebounceTimer = null
+    }
+    localSettings.speedLimitMBps = presetValue
+    applySpeedLimit(presetValue)
+  }
+
+  function handleSpeedSliderInput() {
+    if (!localSettings) return
+    const val = Math.max(0, Number(localSettings.speedLimitMBps) || 0)
+    scheduleSpeedLimitSave(val)
+  }
+
+  function handleSpeedSliderChange() {
+    if (!localSettings) return
+    const val = Math.max(0, Number(localSettings.speedLimitMBps) || 0)
+    applySpeedLimit(val)
+  }
+
+  function handleSpeedInput() {
+    if (!localSettings) return
+    const val = Math.max(0, Number(localSettings.speedLimitMBps) || 0)
+    scheduleSpeedLimitSave(val)
+  }
+
+  function handleSpeedChange() {
+    if (!localSettings) return
+    const val = Math.max(0, Number(localSettings.speedLimitMBps) || 0)
+    applySpeedLimit(val)
+  }
+
+  function scheduleSpeedLimitSave(val: number) {
+    if (speedDebounceTimer) {
+      clearTimeout(speedDebounceTimer)
+    }
+    speedDebounceTimer = setTimeout(() => {
+      speedDebounceTimer = null
+      applySpeedLimit(val)
+    }, 300)
+  }
+
+  async function applySpeedLimit(val: number) {
+    if (speedDebounceTimer) {
+      clearTimeout(speedDebounceTimer)
+      speedDebounceTimer = null
+    }
+    if (!localSettings) return
+    const clean = Math.max(0, Number(val) || 0)
+    localSettings.speedLimitMBps = clean
+    try {
+      await persistSettings(localSettings)
+    } catch (err) {
+      console.error('Failed to auto-save speed limit:', err)
+    }
   }
 
   async function handleBrowseDefaultDir() {
@@ -53,9 +137,16 @@
 
   async function handleSave() {
     if (!localSettings) return
+    if (speedDebounceTimer) {
+      clearTimeout(speedDebounceTimer)
+      speedDebounceTimer = null
+    }
     saving = true
     saveSuccess = false
     try {
+      localSettings.speedLimitMBps = Math.max(0, Number(localSettings.speedLimitMBps) || 0)
+      localSettings.maxConcurrentFiles = Math.max(1, Number(localSettings.maxConcurrentFiles) || 2)
+      localSettings.maxConnectionsPerFile = Math.max(1, Number(localSettings.maxConnectionsPerFile) || 8)
       await persistSettings(localSettings)
       saveSuccess = true
       setTimeout(() => (saveSuccess = false), 3000)
@@ -198,7 +289,7 @@
           <span class="text-sm font-bold text-slate-100 dark:text-white">Download Speed Limit</span>
         </div>
         <div class="px-2.5 py-1 rounded-lg bg-dark-950 border border-dark-700 text-xs font-mono font-medium text-accent-cyan">
-          {(!localSettings.speedLimitMBps || localSettings.speedLimitMBps <= 0) ? 'Unlimited (Max Speed)' : `${localSettings.speedLimitMBps} MB/s`}
+          {(!localSettings.speedLimitMBps || Number(localSettings.speedLimitMBps) <= 0) ? 'Unlimited (Max Speed)' : `${localSettings.speedLimitMBps} MB/s`}
         </div>
       </div>
 
@@ -219,9 +310,9 @@
         ] as preset}
           <button
             type="button"
-            on:click={() => { if (localSettings) localSettings.speedLimitMBps = preset.value }}
+            on:click={() => selectSpeedPreset(preset.value)}
             class="px-2.5 py-1 text-xs rounded-lg border transition-all font-medium {
-              (localSettings.speedLimitMBps || 0) === preset.value
+              Number(localSettings.speedLimitMBps || 0) === preset.value
                 ? 'bg-accent-indigo text-white border-indigo-500 shadow-sm shadow-indigo-500/30'
                 : 'bg-dark-950 text-slate-400 border-dark-700/80 hover:text-slate-200 hover:border-slate-500'
             }"
@@ -244,6 +335,8 @@
             max="100"
             step="1"
             bind:value={localSettings.speedLimitMBps}
+            on:input={handleSpeedSliderInput}
+            on:change={handleSpeedSliderChange}
             class="w-full accent-cyan-500"
           />
         </div>
@@ -259,6 +352,9 @@
               max="1000"
               step="1"
               bind:value={localSettings.speedLimitMBps}
+              on:input={handleSpeedInput}
+              on:change={handleSpeedChange}
+              on:blur={handleSpeedChange}
               placeholder="0 (Unlimited)"
               class="w-full px-3 py-1.5 bg-dark-950 border border-dark-700 rounded-xl text-xs text-slate-100 font-mono focus:outline-none focus:border-accent-cyan focus:ring-1 focus:ring-accent-cyan transition-all shadow-inner"
             />

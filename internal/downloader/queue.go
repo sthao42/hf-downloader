@@ -134,6 +134,9 @@ func (qm *QueueManager) IsAutoDownload() bool {
 
 // SetSpeedLimit dynamically updates the global download rate limit in MB/s.
 func (qm *QueueManager) SetSpeedLimit(limitMBps float64) {
+	if limitMBps < 0 {
+		limitMBps = 0
+	}
 	qm.mu.Lock()
 	if qm.limiter != nil {
 		qm.limiter.SetLimit(limitMBps)

@@ -71,3 +71,29 @@ func TestQueue_CloseIdempotency(t *testing.T) {
 	qm.Close()
 	qm.Close()
 }
+
+func TestQueue_SpeedLimit(t *testing.T) {
+	cm := config.GetManager()
+	qm := NewQueueManager(cm)
+	defer qm.Close()
+
+	initialLimit := qm.GetSpeedLimit()
+	defer qm.SetSpeedLimit(initialLimit)
+
+	qm.SetSpeedLimit(25.0)
+	if qm.GetSpeedLimit() != 25.0 {
+		t.Errorf("expected speed limit 25.0, got %f", qm.GetSpeedLimit())
+	}
+	if cm.GetSettings().SpeedLimitMBps != 25.0 {
+		t.Errorf("expected config speed limit 25.0, got %f", cm.GetSettings().SpeedLimitMBps)
+	}
+
+	qm.SetSpeedLimit(0)
+	if qm.GetSpeedLimit() != 0 {
+		t.Errorf("expected speed limit 0, got %f", qm.GetSpeedLimit())
+	}
+	if cm.GetSettings().SpeedLimitMBps != 0 {
+		t.Errorf("expected config speed limit 0, got %f", cm.GetSettings().SpeedLimitMBps)
+	}
+}
+

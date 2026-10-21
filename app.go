@@ -138,6 +138,9 @@ func (a *App) GetSettings() config.Settings {
 
 // SaveSettings persists updated application settings and refreshes clients.
 func (a *App) SaveSettings(settings config.Settings) error {
+	if settings.SpeedLimitMBps < 0 {
+		settings.SpeedLimitMBps = 0
+	}
 	err := a.configMgr.UpdateSettings(settings)
 	if err == nil {
 		a.hfClient.SetToken(settings.HFToken)

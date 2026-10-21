@@ -17,12 +17,44 @@ export async function fetchSettings() {
 
 export async function persistSettings(updated: any) {
   try {
-    const s = config.Settings.createFrom(updated)
-    await SaveSettings(s)
+    const safeUpdated = {
+      ...updated,
+      speedLimitMBps: Math.max(0, Number(updated.speedLimitMBps) || 0),
+      maxConcurrentFiles: Math.max(1, Number(updated.maxConcurrentFiles) || 2),
+      maxConnectionsPerFile: Math.max(1, Number(updated.maxConnectionsPerFile) || 8)
+    }
+    const s = config.Settings.createFrom(safeUpdated)
     settingsStore.set(s)
+    await SaveSettings(s)
   } catch (err) {
     console.error('Failed to save settings:', err)
     throw err
+  }
+}
+
+export async function updateSpeedLimit(limitMBps: number) {
+  const numericLimit = Math.max(0, Number(limitMBps) || 0)
+  let current: Settings | null = null
+  settingsStore.update(s => {
+    if (s) {
+      current = config.Settings.createFrom({ ...s, speedLimitMBps: numericLimit })
+      return current
+    }
+    return s
+  })
+  if (!current) {
+    const fetched = await fetchSettings()
+    if (fetched) {
+      current = config.Settings.createFrom({ ...fetched, speedLimitMBps: numericLimit })
+      settingsStore.set(current)
+    }
+  }
+  if (current) {
+    try {
+      await SaveSettings(current)
+    } catch (err) {
+      console.error('Failed to update speed limit:', err)
+    }
   }
 }
 

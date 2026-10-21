@@ -247,6 +247,9 @@
         <div class="flex items-center gap-1.5 px-3 py-1 bg-accent-indigo/10 border border-accent-indigo/30 rounded-full text-xs font-mono text-accent-cyan animate-pulse">
           <Zap class="w-3.5 h-3.5 text-accent-indigo" />
           <span class="font-bold">{formattedTotalSpeed}</span>
+          {#if $settingsStore?.speedLimitMBps && $settingsStore.speedLimitMBps > 0}
+            <span class="text-[10px] text-slate-400 font-normal">/ {$settingsStore.speedLimitMBps} MB/s</span>
+          {/if}
         </div>
       {/if}
 
