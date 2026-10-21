@@ -5,8 +5,8 @@ import (
 )
 
 func TestVersion(t *testing.T) {
-	if Get() != "1.1.0" {
-		t.Errorf("expected '1.1.0', got %q", Get())
+	if Get() != "1.1.1" {
+		t.Errorf("expected '1.1.1', got %q", Get())
 	}
 
 	info := Info()
@@ -15,7 +15,7 @@ func TestVersion(t *testing.T) {
 	}
 
 	bInfo := BuildInfo()
-	if bInfo["version"] != "1.1.0" {
-		t.Errorf("expected '1.1.0' in build info, got %q", bInfo["version"])
+	if bInfo["version"] != "1.1.1" {
+		t.Errorf("expected '1.1.1' in build info, got %q", bInfo["version"])
 	}
 }
